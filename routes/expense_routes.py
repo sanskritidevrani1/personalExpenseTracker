@@ -13,11 +13,12 @@ def add_transaction():
     category = data.get('category', '')
     description = data.get('description', '')
     txn_date = data['txn_date']
+    payment_type = data.get('payment_type','online')
 
     cur = mysql.connection.cursor()
     cur.execute(
-        "INSERT INTO transactions (user_id, amount, type, category, description, txn_date) VALUES (%s, %s, %s, %s, %s, %s)",
-        (user_id, amount, txn_type, category, description, txn_date)
+        "INSERT INTO transactions (user_id, amount, type, category, description, txn_date,payment_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (user_id, amount, txn_type, category, description, txn_date,payment_type)
     )
     mysql.connection.commit()
     cur.close()
@@ -42,7 +43,8 @@ def get_transactions(user_id):
             "type": row[3],
             "category": row[4],
             "description": row[5],
-            "txn_date": str(row[6])
+            "txn_date": str(row[6]),
+            "payment_type": row[8]
         })
 
     return jsonify(transactions), 200
