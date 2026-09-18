@@ -4,6 +4,7 @@ import config
 from models.db import mysql
 from routes.auth_routes import auth_bp
 from routes.expense_routes import expense_bp
+from routes.budget_routes import budget_bp
 
 app = Flask(__name__)
 app.config['MYSQL_HOST'] = config.MYSQL_HOST
@@ -16,6 +17,7 @@ bcrypt = Bcrypt(app)
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(expense_bp)
+app.register_blueprint(budget_bp)
 
 @app.route('/')
 def home():
