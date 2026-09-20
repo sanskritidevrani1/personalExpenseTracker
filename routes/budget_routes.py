@@ -88,3 +88,42 @@ def get_total_spent(user_id, category, month, year):
     total_spent = float(result[0]) if result[0] else 0.0
 
     return jsonify({"category": category, "total_spent": total_spent}), 200
+
+# Check if spending has crossed the budget limit
+@budget_bp.route('/budget-check/<int:user_id>/<category>/<int:month>/<int:year>', methods=['GET'])
+def check_budget_status(user_id, category, month, year):
+    cur = mysql.connection.cursor()
+
+    # Get the budget limit
+    cur.execute(
+        "SELECT limit_amount FROM budgets WHERE user_id = %s AND category = %s AND month = %s AND year = %s",
+        (user_id, category, month, year)
+    )
+    budget_row = cur.fetchone()
+
+    # Get total spent
+    cur.execute(
+        "SELECT SUM(amount) FROM transactions WHERE user_id = %s AND category = %s AND type = 'expense' AND MONTH(txn_date) = %s AND YEAR(txn_date) = %s",
+        (user_id, category, month, year)
+    )
+    spent_row = cur.fetchone()
+    cur.close()
+
+    if not budget_row:
+        return jsonify({"message": "No budget set for this category"}), 404
+
+    limit_amount = float(budget_row[0])
+    total_spent = float(spent_row[0]) if spent_row[0] else 0.0
+
+    status = "within_budget"
+    if total_spent >= limit_amount:
+        status = "exceeded"
+    elif total_spent >= 0.8 * limit_amount:
+        status = "nearing_limit"
+
+    return jsonify({
+        "category": category,
+        "limit_amount": limit_amount,
+        "total_spent": total_spent,
+        "status": status
+    }), 200
