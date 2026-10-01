@@ -13,18 +13,55 @@ def add_transaction():
     category = data.get('category', '')
     description = data.get('description', '')
     txn_date = data['txn_date']
-    payment_type = data.get('payment_type','online')
+    payment_type = data.get('payment_type', 'online')
 
     cur = mysql.connection.cursor()
     cur.execute(
-        "INSERT INTO transactions (user_id, amount, type, category, description, txn_date,payment_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (user_id, amount, txn_type, category, description, txn_date,payment_type)
+        "INSERT INTO transactions (user_id, amount, type, category, description, txn_date, payment_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        (user_id, amount, txn_type, category, description, txn_date, payment_type)
     )
     mysql.connection.commit()
+
+    budget_alert = None
+    if txn_type == 'expense':
+        from datetime import datetime
+        month = datetime.strptime(txn_date, '%Y-%m-%d').month
+        year = datetime.strptime(txn_date, '%Y-%m-%d').year
+
+        cur.execute(
+            "SELECT limit_amount FROM budgets WHERE user_id = %s AND category = %s AND month = %s AND year = %s",
+            (user_id, category, month, year)
+        )
+        budget_row = cur.fetchone()
+
+        if budget_row:
+            cur.execute(
+                "SELECT SUM(amount) FROM transactions WHERE user_id = %s AND category = %s AND type = 'expense' AND MONTH(txn_date) = %s AND YEAR(txn_date) = %s",
+                (user_id, category, month, year)
+            )
+            spent_row = cur.fetchone()
+            limit_amount = float(budget_row[0])
+            total_spent = float(spent_row[0]) if spent_row[0] else 0.0
+
+            status = "within_budget"
+            if total_spent >= limit_amount:
+                status = "exceeded"
+            elif total_spent >= 0.8 * limit_amount:
+                status = "nearing_limit"
+
+            budget_alert = {
+                "limit_amount": limit_amount,
+                "total_spent": total_spent,
+                "status": status
+            }
+
     cur.close()
 
-    return jsonify({"message": "Transaction added successfully"}), 201
+    response = {"message": "Transaction added successfully"}
+    if budget_alert:
+        response["budget_alert"] = budget_alert
 
+    return jsonify(response), 201
 
 # Get all transactions for a user
 @expense_bp.route('/transactions/<int:user_id>', methods=['GET'])
