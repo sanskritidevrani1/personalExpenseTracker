@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_bcrypt import Bcrypt
+from flask_cors import CORS
 import config
 from models.db import mysql
 from routes.auth_routes import auth_bp
@@ -7,6 +8,7 @@ from routes.expense_routes import expense_bp
 from routes.budget_routes import budget_bp
 
 app = Flask(__name__)
+CORS(app)
 app.config['MYSQL_HOST'] = config.MYSQL_HOST
 app.config['MYSQL_USER'] = config.MYSQL_USER
 app.config['MYSQL_PASSWORD'] = config.MYSQL_PASSWORD
