@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Expense Tracker</title>
+
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="brand-icon">💰</span>
+                <span class="brand-name">ExpenseTracker</span>
+            </div>
+
+            <ul class="nav-menu">
+                <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
+                <li><a href="#add-expense" class="nav-link">Add Expense</a></li>
+                <li><a href="#history" class="nav-link">Transactions</a></li>
+            </ul>
+
+            <div class="nav-user">
+                <span class="user-name">Alex Johnson</span>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+
+    <main class="main-container" id="dashboard">
+
+
+        <header class="page-header">
+            <div>
+                <h1>Financial Dashboard</h1>
+                <p>Simple tracker for your monthly income and expenses</p>
+            </div>
+        </header>
+
+
+        <section class="summary-cards-grid">
+            <div class="card summary-card">
+                <span class="card-label">Total Balance</span>
+                <h2 class="card-value" id="totalBalance"> ₹2,450.00</h2>
+                <span class="card-sub">Available savings</span>
+            </div>
+
+            <div class="card summary-card">
+                <span class="card-label">Total Income</span>
+                <h2 class="card-value text-green" id="totalIncome">+ ₹4,000.00</h2>
+                <span class="card-sub">Earned this month</span>
+            </div>
+
+            <div class="card summary-card">
+                <span class="card-label">Total Expenses</span>
+                <h2 class="card-value text-red" id="totalExpense">- ₹1,550.00 </h2>
+                <span class="card-sub">Spent this month</span>
+            </div>
+        </section>
+
+
+        <section class="chart-section">
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h3>Spending by Category</h3>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="categoryChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+
+        <div class="content-grid">
+
+
+            <section class="card form-card" id="add-expense">
+                <div class="card-header">
+                    <h3 id="formTitle">Add New Transaction</h3>
+                </div>
+
+                <form id="expenseForm" onsubmit="handleFormSubmit(event)">
+
+                    <input type="hidden" id="editTxnId" value="">
+
+
+                    <div class="form-group">
+                        <label>Type</label>
+                        <div class="type-selector">
+                            <label class="radio-label">
+                                <input type="radio" name="txnType" value="expense" checked
+                                    onchange="handleTypeChange()">
+                                <span class="radio-btn expense-btn">Expense</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="txnType" value="income" onchange="handleTypeChange()">
+                                <span class="radio-btn income-btn">Income</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txnDescription">Description</label>
+                        <input type="text" id="txnDescription" placeholder="e.g. Supermarket, Uber, Salary" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label for="txnAmount">Amount ($)</label>
+                            <input type="number" id="txnAmount" placeholder="0.00" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="form-group col">
+                            <label for="txnDate">Date</label>
+                            <input type="date" id="txnDate" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col">
+                            <label for="txnCategory">Category</label>
+                            <select id="txnCategory" required>
+                                <option value="Food & Dining">Food & Dining</option>
+                                <option value="Transportation">Transportation</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Bills & Utilities">Bills & Utilities</option>
+                                <option value="Salary">Salary</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group col">
+                            <label for="txnPaymentType">Payment Mode</label>
+                            <select id="txnPaymentType" required>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Online">Online / UPI</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank">Bank Transfer</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="submitBtn">Add Transaction</button>
+                        <button type="button" class="btn btn-secondary" id="cancelBtn" onclick="resetForm()"
+                            style="display: none;">Cancel</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- RIGHT: TRANSACTIONS TABLE -->
+            <section class="card table-card" id="history">
+                <div class="card-header table-card-header">
+                    <div>
+                        <h3>Recent Transactions</h3>
+                    </div>
+                    <!-- Search & Filter -->
+                    <div class="filter-controls">
+                        <input type="text" id="searchInput" placeholder="Search..." oninput="filterTransactions()">
+                        <select id="categoryFilter" onchange="filterTransactions()">
+                            <option value="All">All Categories</option>
+                            <option value="Food & Dining">Food & Dining</option>
+                            <option value="Transportation">Transportation</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Bills & Utilities">Bills & Utilities</option>
+                            <option value="Salary">Salary</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="transaction-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Mode</th>
+                                <th>Amount</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTableBody">
+                            <!-- Loaded from script.js -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <p>No transactions found.</p>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Personal Expense Tracker &bull; Simple & Minimal Student Project</p>
+    </footer>
+
+    <!-- Logic Script -->
+    <script src="script.js"></script>
+</body>
+
+</html>

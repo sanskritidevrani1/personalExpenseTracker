@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker - Login</title>
+    <!-- Simple Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <!-- Separate CSS file for Login -->
+    <link rel="stylesheet" href="login.css">
+</head>
+
+<body>
+
+    <div class="login-wrapper">
+        <div class="login-box">
+            <!-- Header -->
+            <div class="header">
+                <h2>💰 Expense Tracker</h2>
+                <p>Simple personal expense manager</p>
+            </div>
+
+            <!-- Login Form (Standard HTML Form, No JS file needed) -->
+            <form action="index.html" method="GET" class="simple-form">
+                <div class="input-field">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="user@example.com" value="alex@example.com"
+                        required>
+                </div>
+
+                <div class="input-field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter password"
+                        value="password123" required>
+                </div>
+
+                <div class="extra-row">
+                    <label class="remember">
+                        <input type="checkbox" checked> Remember me
+                    </label>
+                    <a href="#" class="link">Forgot password?</a>
+                </div>
+
+                <button type="submit" class="login-btn">Login to Dashboard</button>
+
+                <!-- Direct link to dashboard -->
+                <a href="index.html" class="guest-btn">Enter as Guest / Demo</a>
+            </form>
+
+            <!-- Registration Link -->
+            <div class="footer-note">
+                <p>New user? <a href="#" class="link">Create an account</a></p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

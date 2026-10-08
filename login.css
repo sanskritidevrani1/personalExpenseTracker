@@ -1,0 +1,168 @@
+/* ========================================================
+   Personal Expense Tracker - Login Stylesheet (login.css)
+   Clean, Minimal, Subtle and User-Friendly
+   ======================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: #f1f5f9;
+    color: #334155;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Card Container */
+.login-wrapper {
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-box {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 32px 28px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Header */
+.header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.header h2 {
+    font-size: 22px;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+.header p {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Form Fields */
+.simple-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.input-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.input-field label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.input-field input {
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-field input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.input-field input:hover {
+    border-color: #94a3b8;
+}
+
+/* Extra Options */
+.extra-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12.5px;
+    color: #64748b;
+}
+
+.remember {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.remember input {
+    accent-color: #2563eb;
+    cursor: pointer;
+}
+
+.link {
+    color: #2563eb;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.link:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+/* Buttons with Hover Effects */
+.login-btn {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 11px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.login-btn:hover {
+    background-color: #1d4ed8;
+}
+
+.guest-btn {
+    display: block;
+    text-align: center;
+    background-color: #f8fafc;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    padding: 9px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.guest-btn:hover {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-color: #93c5fd;
+}
+
+/* Footer Note */
+.footer-note {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 13px;
+    color: #64748b;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 14px;
+}
