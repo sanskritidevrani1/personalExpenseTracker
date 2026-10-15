@@ -37,6 +37,6 @@ def login():
     cur.close()
 
     if user and bcrypt.check_password_hash(user[3], password):
-        return jsonify({"message": "Login successful"}), 200
+        return jsonify({"message": "Login successful", "user_id": user[0]}), 200
     else:
         return jsonify({"message": "Invalid credentials"}), 401

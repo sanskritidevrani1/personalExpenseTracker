@@ -3,7 +3,7 @@ from models.db import mysql
 
 expense_bp = Blueprint('expense_bp', __name__)
 
-# Add a new transaction (income or expense)
+
 @expense_bp.route('/transactions', methods=['POST'])
 def add_transaction():
     data = request.get_json()
@@ -63,7 +63,7 @@ def add_transaction():
 
     return jsonify(response), 201
 
-# Get all transactions for a user
+
 @expense_bp.route('/transactions/<int:user_id>', methods=['GET'])
 def get_transactions(user_id):
     cur = mysql.connection.cursor()
@@ -87,31 +87,40 @@ def get_transactions(user_id):
     return jsonify(transactions), 200
 
 
-# Update a transaction
 @expense_bp.route('/transactions/<int:txn_id>', methods=['PUT'])
 def update_transaction(txn_id):
     data = request.get_json()
+    user_id = data['user_id']
     amount = data['amount']
     category = data.get('category', '')
     description = data.get('description', '')
 
     cur = mysql.connection.cursor()
     cur.execute(
-        "UPDATE transactions SET amount = %s, category = %s, description = %s WHERE txn_id = %s",
-        (amount, category, description, txn_id)
+        "UPDATE transactions SET amount = %s, category = %s, description = %s WHERE txn_id = %s AND user_id = %s",
+        (amount, category, description, txn_id, user_id)
     )
     mysql.connection.commit()
+    rows_affected = cur.rowcount
     cur.close()
+
+    if rows_affected == 0:
+        return jsonify({"message": "Transaction not found or does not belong to this user"}), 404
 
     return jsonify({"message": "Transaction updated successfully"}), 200
 
 
-# Delete a transaction
 @expense_bp.route('/transactions/<int:txn_id>', methods=['DELETE'])
 def delete_transaction(txn_id):
+    user_id = request.args.get('user_id')
+
     cur = mysql.connection.cursor()
-    cur.execute("DELETE FROM transactions WHERE txn_id = %s", (txn_id,))
+    cur.execute("DELETE FROM transactions WHERE txn_id = %s AND user_id = %s", (txn_id, user_id))
     mysql.connection.commit()
+    rows_affected = cur.rowcount
     cur.close()
+
+    if rows_affected == 0:
+        return jsonify({"message": "Transaction not found or does not belong to this user"}), 404
 
     return jsonify({"message": "Transaction deleted successfully"}), 200

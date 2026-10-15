@@ -3,7 +3,7 @@ from models.db import mysql
 
 budget_bp = Blueprint('budget_bp', __name__)
 
-# Set a new budget
+
 @budget_bp.route('/budgets', methods=['POST'])
 def add_budget():
     data = request.get_json()
@@ -24,7 +24,7 @@ def add_budget():
     return jsonify({"message": "Budget set successfully"}), 201
 
 
-# Get all budgets for a user
+
 @budget_bp.route('/budgets/<int:user_id>', methods=['GET'])
 def get_budgets(user_id):
     cur = mysql.connection.cursor()
@@ -46,30 +46,39 @@ def get_budgets(user_id):
     return jsonify(budgets), 200
 
 
-# Update a budget
 @budget_bp.route('/budgets/<int:budget_id>', methods=['PUT'])
 def update_budget(budget_id):
     data = request.get_json()
+    user_id = data['user_id']
     limit_amount = data['limit_amount']
 
     cur = mysql.connection.cursor()
     cur.execute(
-        "UPDATE budgets SET limit_amount = %s WHERE budget_id = %s",
-        (limit_amount, budget_id)
+        "UPDATE budgets SET limit_amount = %s WHERE budget_id = %s AND user_id = %s",
+        (limit_amount, budget_id, user_id)
     )
     mysql.connection.commit()
+    rows_affected = cur.rowcount
     cur.close()
+
+    if rows_affected == 0:
+        return jsonify({"message": "Budget not found or does not belong to this user"}), 404
 
     return jsonify({"message": "Budget updated successfully"}), 200
 
 
-# Delete a budget
 @budget_bp.route('/budgets/<int:budget_id>', methods=['DELETE'])
 def delete_budget(budget_id):
+    user_id = request.args.get('user_id')
+
     cur = mysql.connection.cursor()
-    cur.execute("DELETE FROM budgets WHERE budget_id = %s", (budget_id,))
+    cur.execute("DELETE FROM budgets WHERE budget_id = %s AND user_id = %s", (budget_id, user_id))
     mysql.connection.commit()
+    rows_affected = cur.rowcount
     cur.close()
+
+    if rows_affected == 0:
+        return jsonify({"message": "Budget not found or does not belong to this user"}), 404
 
     return jsonify({"message": "Budget deleted successfully"}), 200
     
