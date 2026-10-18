@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from models.db import mysql
 
+
 expense_bp = Blueprint('expense_bp', __name__)
 
 
