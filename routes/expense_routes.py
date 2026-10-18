@@ -1,5 +1,9 @@
 from flask import Blueprint, request, jsonify
 from models.db import mysql
+import os
+import tempfile
+from data_processing import auto_categorize_transaction, process_transaction_file
+
 
 
 expense_bp = Blueprint('expense_bp', __name__)
@@ -125,3 +129,55 @@ def delete_transaction(txn_id):
         return jsonify({"message": "Transaction not found or does not belong to this user"}), 404
 
     return jsonify({"message": "Transaction deleted successfully"}), 200
+
+
+@expense_bp.route('/import-transactions', methods=['POST'])
+def import_transactions():
+    # 1. Check if request came via form-data OR json
+    if request.is_json:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        file_path = data.get('file_path')
+        if not user_id or not file_path:
+            return jsonify({"message": "user_id and file_path are required"}), 400
+        
+        try:
+            transactions = process_transaction_file(file_path, int(user_id))
+        except Exception as e:
+            return jsonify({"message": "Could not read file", "error": str(e)}), 400
+
+    else:
+        # Standard File Upload
+        user_id = request.form.get('user_id')
+        file = request.files.get('file')
+        if not user_id or not file:
+            return jsonify({"message": "user_id and file are required"}), 400
+
+        suffix = os.path.splitext(file.filename)[1].lower()
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        tmp.close()
+        file.save(tmp.name)
+
+        try:
+            transactions = process_transaction_file(tmp.name, int(user_id))
+        except Exception as e:
+            return jsonify({"message": "Could not read file", "error": str(e)}), 400
+        finally:
+            if os.path.exists(tmp.name):
+                os.remove(tmp.name)
+
+    rows = [
+        (t['user_id'], t['amount'], t['type'], t['category'],
+         t['description'], t['txn_date'], t['payment_type'])
+        for t in transactions
+    ]
+
+    cur = mysql.connection.cursor()
+    cur.executemany(
+        "INSERT INTO transactions (user_id, amount, type, category, description, txn_date, payment_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+        rows
+    )
+    mysql.connection.commit()
+    cur.close()
+
+    return jsonify({"message": "Transactions imported successfully", "imported": len(transactions)}), 201
