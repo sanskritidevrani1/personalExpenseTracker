@@ -1,57 +1,49 @@
-/* ========================================================
-   Personal Expense Tracker - Login Stylesheet (login.css)
-   Clean, Minimal, Subtle and User-Friendly
-   ======================================================== */
-
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
+    font-family: 'Inter', sans-serif;
 }
 
 body {
-    background-color: #f1f5f9;
-    color: #334155;
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+        radial-gradient(circle at top, rgba(99, 140, 255, 0.18), transparent 36%),
+        #151821;
+    color: #f1f3f8;
 }
 
-/* Card Container */
 .login-wrapper {
-    width: 100%;
-    max-width: 400px;
+    width: min(100%, 420px);
 }
 
 .login-box {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 32px 28px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    background: #191d26;
+    border: 1px solid #303746;
+    border-radius: 18px;
+    padding: 30px 26px 24px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
 }
 
-/* Header */
 .header {
     text-align: center;
     margin-bottom: 24px;
 }
 
 .header h2 {
-    font-size: 22px;
-    color: #1e293b;
-    margin-bottom: 4px;
+    font-size: 1.8rem;
+    letter-spacing: -0.05em;
+    margin-bottom: 6px;
 }
 
 .header p {
-    font-size: 13px;
-    color: #64748b;
+    color: #969eae;
+    font-size: 0.85rem;
 }
 
-/* Form Fields */
 .simple-form {
     display: flex;
     flex-direction: column;
@@ -61,108 +53,109 @@ body {
 .input-field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 7px;
 }
 
 .input-field label {
-    font-size: 13px;
+    color: #f1f3f8;
+    font-size: 0.8rem;
     font-weight: 500;
-    color: #475569;
 }
 
 .input-field input {
-    padding: 10px 12px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 14px;
-    outline: none;
+    min-height: 44px;
+    padding: 0 12px;
+    background: #202530;
+    border: 1px solid #303746;
+    border-radius: 10px;
+    color: #f1f3f8;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .input-field input:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    outline: none;
+    border-color: #638cff;
+    box-shadow: 0 0 0 3px rgba(99, 140, 255, 0.18);
 }
 
-.input-field input:hover {
-    border-color: #94a3b8;
+.input-field input::placeholder {
+    color: #70798a;
 }
 
-/* Extra Options */
 .extra-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    font-size: 12.5px;
-    color: #64748b;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: #969eae;
 }
 
 .remember {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    cursor: pointer;
+    gap: 8px;
 }
 
 .remember input {
-    accent-color: #2563eb;
-    cursor: pointer;
+    accent-color: #638cff;
 }
 
 .link {
-    color: #2563eb;
+    color: #638cff;
     text-decoration: none;
-    transition: color 0.2s ease;
 }
 
 .link:hover {
-    color: #1d4ed8;
     text-decoration: underline;
 }
 
-/* Buttons with Hover Effects */
-.login-btn {
-    background-color: #2563eb;
-    color: #ffffff;
-    border: none;
-    padding: 11px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
+.login-btn,
+.guest-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
 }
 
-.login-btn:hover {
-    background-color: #1d4ed8;
+.login-btn {
+    background: #638cff;
+    color: white;
+    box-shadow: 0 10px 18px rgba(99, 140, 255, 0.2);
+}
+
+.login-btn:hover,
+.guest-btn:hover {
+    transform: translateY(-1px);
 }
 
 .guest-btn {
-    display: block;
-    text-align: center;
-    background-color: #f8fafc;
-    color: #475569;
-    border: 1px solid #cbd5e1;
-    padding: 9px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    background: #202530;
+    color: #f1f3f8;
+    border-color: #303746;
 }
 
-.guest-btn:hover {
-    background-color: #eff6ff;
-    color: #2563eb;
-    border-color: #93c5fd;
-}
-
-/* Footer Note */
 .footer-note {
-    text-align: center;
-    margin-top: 20px;
-    font-size: 13px;
-    color: #64748b;
-    border-top: 1px solid #f1f5f9;
+    margin-top: 18px;
     padding-top: 14px;
+    border-top: 1px solid #303746;
+    text-align: center;
+    color: #969eae;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 480px) {
+    .login-box {
+        padding: 24px 18px 20px;
+    }
+
+    .header h2 {
+        font-size: 1.5rem;
+    }
 }

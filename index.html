@@ -4,215 +4,301 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Expense Tracker</title>
-
-
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-
-
+    <title>Expense Analytics Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand">
-                <span class="brand-icon">💰</span>
-                <span class="brand-name">ExpenseTracker</span>
-            </div>
-
-            <ul class="nav-menu">
-                <li><a href="#dashboard" class="nav-link active">Dashboard</a></li>
-                <li><a href="#add-expense" class="nav-link">Add Expense</a></li>
-                <li><a href="#history" class="nav-link">Transactions</a></li>
-            </ul>
-
-            <div class="nav-user">
-                <span class="user-name">Alex Johnson</span>
-                <button class="logout-btn" onclick="logout()">Logout</button>
-            </div>
-        </div>
-    </nav>
-
-
-    <main class="main-container" id="dashboard">
-
-
-        <header class="page-header">
-            <div>
-                <h1>Financial Dashboard</h1>
-                <p>Simple tracker for your monthly income and expenses</p>
-            </div>
-        </header>
-
-
-        <section class="summary-cards-grid">
-            <div class="card summary-card">
-                <span class="card-label">Total Balance</span>
-                <h2 class="card-value" id="totalBalance"> ₹2,450.00</h2>
-                <span class="card-sub">Available savings</span>
-            </div>
-
-            <div class="card summary-card">
-                <span class="card-label">Total Income</span>
-                <h2 class="card-value text-green" id="totalIncome">+ ₹4,000.00</h2>
-                <span class="card-sub">Earned this month</span>
-            </div>
-
-            <div class="card summary-card">
-                <span class="card-label">Total Expenses</span>
-                <h2 class="card-value text-red" id="totalExpense">- ₹1,550.00 </h2>
-                <span class="card-sub">Spent this month</span>
-            </div>
-        </section>
-
-
-        <section class="chart-section">
-            <div class="card chart-card">
-                <div class="card-header">
-                    <h3>Spending by Category</h3>
-                </div>
-                <div class="chart-wrapper">
-                    <canvas id="categoryChart"></canvas>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand-block">
+                <div class="brand-mark">₹</div>
+                <div class="brand-copy">
+                    <div class="brand-name">NexaLedger</div>
+                    <div class="brand-subtitle">Finance Suite</div>
                 </div>
             </div>
-        </section>
 
+            <nav class="sidebar-nav" aria-label="Main navigation">
+                <a href="#dashboard" class="nav-item active">
+                    <span class="nav-icon">◫</span>
+                    Dashboard
+                </a>
+                <a href="#transactions" class="nav-item">
+                    <span class="nav-icon">↔</span>
+                    Transactions
+                </a>
+            </nav>
 
-        <div class="content-grid">
+            <div class="sidebar-status">
+                <span class="status-dot"></span>
+                Demo data active
+            </div>
+        </aside>
 
-
-            <section class="card form-card" id="add-expense">
-                <div class="card-header">
-                    <h3 id="formTitle">Add New Transaction</h3>
+        <main class="main-panel">
+            <header class="page-header" id="dashboard">
+                <div>
+                    <p class="eyebrow">Overview</p>
+                    <h1>Dashboard</h1>
                 </div>
 
-                <form id="expenseForm" onsubmit="handleFormSubmit(event)">
-
-                    <input type="hidden" id="editTxnId" value="">
-
-
-                    <div class="form-group">
-                        <label>Type</label>
-                        <div class="type-selector">
-                            <label class="radio-label">
-                                <input type="radio" name="txnType" value="expense" checked
-                                    onchange="handleTypeChange()">
-                                <span class="radio-btn expense-btn">Expense</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="txnType" value="income" onchange="handleTypeChange()">
-                                <span class="radio-btn income-btn">Income</span>
-                            </label>
-                        </div>
+                <div class="header-actions">
+                    <div class="period-picker">
+                        <label for="monthSelect">Month</label>
+                        <select id="monthSelect"></select>
                     </div>
-
-                    <div class="form-group">
-                        <label for="txnDescription">Description</label>
-                        <input type="text" id="txnDescription" placeholder="e.g. Supermarket, Uber, Salary" required>
+                    <div class="period-picker">
+                        <label for="rangeSelect">Range</label>
+                        <select id="rangeSelect">
+                            <option value="6m">Last 6 months</option>
+                            <option value="3m">Last 3 months</option>
+                            <option value="1m">This month</option>
+                            <option value="all">All time</option>
+                        </select>
                     </div>
+                    <button class="primary-btn" id="addTransactionBtn">Add Transaction</button>
+                    <button class="secondary-btn" id="resetDemoBtn" type="button">Reset Demo Data</button>
+                </div>
+            </header>
 
-                    <div class="form-row">
-                        <div class="form-group col">
-                            <label for="txnAmount">Amount ($)</label>
-                            <input type="number" id="txnAmount" placeholder="0.00" step="0.01" min="0.01" required>
-                        </div>
-                        <div class="form-group col">
-                            <label for="txnDate">Date</label>
-                            <input type="date" id="txnDate" required>
-                        </div>
+            <section class="summary-cards-grid">
+                <article class="card summary-card">
+                    <div class="card-headline">
+                        <span class="summary-icon accent-blue">◌</span>
+                        <span class="summary-label">Total Balance</span>
                     </div>
+                    <h2 class="card-value" id="totalBalance">₹0</h2>
+                    <span class="summary-trend positive" id="balanceTrend">+0.0% vs last month</span>
+                </article>
 
-                    <div class="form-row">
-                        <div class="form-group col">
-                            <label for="txnCategory">Category</label>
-                            <select id="txnCategory" required>
-                                <option value="Food & Dining">Food & Dining</option>
-                                <option value="Transportation">Transportation</option>
-                                <option value="Shopping">Shopping</option>
-                                <option value="Bills & Utilities">Bills & Utilities</option>
-                                <option value="Salary">Salary</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group col">
-                            <label for="txnPaymentType">Payment Mode</label>
-                            <select id="txnPaymentType" required>
-                                <option value="Credit Card">Credit Card</option>
-                                <option value="Online">Online / UPI</option>
-                                <option value="Cash">Cash</option>
-                                <option value="Bank">Bank Transfer</option>
-                            </select>
-                        </div>
+                <article class="card summary-card">
+                    <div class="card-headline">
+                        <span class="summary-icon accent-green">↗</span>
+                        <span class="summary-label">Total Income</span>
                     </div>
+                    <h2 class="card-value positive" id="totalIncome">₹0</h2>
+                    <span class="summary-trend positive" id="incomeTrend">+0.0% vs last month</span>
+                </article>
 
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" id="submitBtn">Add Transaction</button>
-                        <button type="button" class="btn btn-secondary" id="cancelBtn" onclick="resetForm()"
-                            style="display: none;">Cancel</button>
+                <article class="card summary-card">
+                    <div class="card-headline">
+                        <span class="summary-icon accent-red">↘</span>
+                        <span class="summary-label">Total Expenses</span>
                     </div>
-                </form>
+                    <h2 class="card-value negative" id="totalExpense">₹0</h2>
+                    <span class="summary-trend negative" id="expenseTrend">-0.0% vs last month</span>
+                </article>
+
+                <article class="card summary-card">
+                    <div class="card-headline">
+                        <span class="summary-icon accent-purple">◎</span>
+                        <span class="summary-label">Savings Rate</span>
+                    </div>
+                    <h2 class="card-value" id="savingsRate">0%</h2>
+                    <span class="summary-trend neutral" id="savingsTrend">Healthy allocation</span>
+                </article>
             </section>
 
-            <!-- RIGHT: TRANSACTIONS TABLE -->
-            <section class="card table-card" id="history">
-                <div class="card-header table-card-header">
-                    <div>
-                        <h3>Recent Transactions</h3>
+            <section class="analytics-grid">
+                <article class="card chart-card chart-wide">
+                    <div class="card-header compact">
+                        <div>
+                            <p class="eyebrow">Performance</p>
+                            <h3>Monthly Income vs Expenses</h3>
+                        </div>
                     </div>
-                    <!-- Search & Filter -->
-                    <div class="filter-controls">
-                        <input type="text" id="searchInput" placeholder="Search..." oninput="filterTransactions()">
-                        <select id="categoryFilter" onchange="filterTransactions()">
-                            <option value="All">All Categories</option>
-                            <option value="Food & Dining">Food & Dining</option>
-                            <option value="Transportation">Transportation</option>
-                            <option value="Shopping">Shopping</option>
-                            <option value="Bills & Utilities">Bills & Utilities</option>
-                            <option value="Salary">Salary</option>
-                            <option value="Other">Other</option>
+                    <div class="chart-wrapper big">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </article>
+
+                <article class="card chart-card">
+                    <div class="card-header compact">
+                        <div>
+                            <p class="eyebrow">Breakdown</p>
+                            <h3>Expense Breakdown</h3>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper donut">
+                        <canvas id="expenseBreakdownChart"></canvas>
+                    </div>
+                </article>
+
+                <article class="card chart-card">
+                    <div class="card-header compact">
+                        <div>
+                            <p class="eyebrow">Trend</p>
+                            <h3>Spending Trend</h3>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper small">
+                        <canvas id="spendingTrendChart"></canvas>
+                    </div>
+                </article>
+
+                <article class="card chart-card">
+                    <div class="card-header compact">
+                        <div>
+                            <p class="eyebrow">Ranking</p>
+                            <h3>Category Comparison</h3>
+                        </div>
+                    </div>
+                    <div class="chart-wrapper small">
+                        <canvas id="categoryComparisonChart"></canvas>
+                    </div>
+                </article>
+            </section>
+
+            <section class="card transactions-panel" id="transactions">
+                <div class="panel-header">
+                    <div>
+                        <p class="eyebrow">Activity</p>
+                        <h2>Recent Transactions</h2>
+                    </div>
+                    <a href="#transactions" class="text-link">View All</a>
+                </div>
+
+                <div class="filters-row">
+                    <div class="field search-field">
+                        <label class="sr-only" for="searchInput">Search</label>
+                        <input type="text" id="searchInput" placeholder="Search transaction or category">
+                    </div>
+                    <div class="field">
+                        <label class="sr-only" for="typeFilter">Type</label>
+                        <select id="typeFilter">
+                            <option value="all">All types</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expenses</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label class="sr-only" for="categoryFilter">Category</label>
+                        <select id="categoryFilter">
+                            <option value="all">All categories</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label class="sr-only" for="timeFilter">Date range</label>
+                        <select id="timeFilter">
+                            <option value="all">All time</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="180">Last 180 days</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label class="sr-only" for="sortFilter">Sort</label>
+                        <select id="sortFilter">
+                            <option value="newest">Newest first</option>
+                            <option value="oldest">Oldest first</option>
+                            <option value="highest">Highest amount</option>
+                            <option value="lowest">Lowest amount</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="table-responsive">
+                <div class="table-wrap">
                     <table class="transaction-table">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Description</th>
+                                <th>Title</th>
                                 <th>Category</th>
-                                <th>Mode</th>
+                                <th>Date</th>
+                                <th>Payment</th>
                                 <th>Amount</th>
-                                <th class="text-center">Action</th>
+                                <th>Type</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="transactionTableBody">
-                            <!-- Loaded from script.js -->
-                        </tbody>
+                        <tbody id="transactionTableBody"></tbody>
                     </table>
-                </div>
-
-                <div class="empty-state" id="emptyState" style="display: none;">
-                    <p>No transactions found.</p>
+                    <div class="empty-state" id="emptyState" hidden>
+                        <p>No transactions match the selected period.</p>
+                    </div>
                 </div>
             </section>
+        </main>
+    </div>
 
+    <div class="modal-backdrop" id="transactionModal" aria-hidden="true">
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">Entry</p>
+                    <h3 id="modalTitle">Add Transaction</h3>
+                </div>
+                <button class="icon-close" type="button" aria-label="Close dialog">×</button>
+            </div>
+
+            <form id="transactionForm">
+                <input type="hidden" id="editTxnId" value="">
+
+                <div class="form-grid">
+                    <div class="field-group full-width">
+                        <label for="txnDescription">Title</label>
+                        <input type="text" id="txnDescription" placeholder="e.g. Grocery run, Salary deposit" required>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="txnAmount">Amount</label>
+                        <input type="number" id="txnAmount" placeholder="0.00" step="0.01" min="0.01" required>
+                    </div>
+
+                    <div class="field-group">
+                        <label>Type</label>
+                        <div class="type-toggle" role="radiogroup" aria-label="Transaction type">
+                            <label class="toggle-option">
+                                <input type="radio" name="txnType" value="expense" checked>
+                                <span>Expense</span>
+                            </label>
+                            <label class="toggle-option">
+                                <input type="radio" name="txnType" value="income">
+                                <span>Income</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="txnCategory">Category</label>
+                        <select id="txnCategory" required></select>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="txnDate">Date</label>
+                        <input type="date" id="txnDate" required>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="txnPaymentType">Payment method</label>
+                        <select id="txnPaymentType" required>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Online">Online / UPI</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Bank">Bank Transfer</option>
+                        </select>
+                    </div>
+
+                    <div class="field-group full-width">
+                        <label for="txnNotes">Description</label>
+                        <textarea id="txnNotes" rows="3" placeholder="Optional notes about this transaction"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="secondary-btn" id="cancelTransactionBtn">Cancel</button>
+                    <button type="submit" class="primary-btn" id="submitBtn">Save Transaction</button>
+                </div>
+            </form>
         </div>
+    </div>
 
-    </main>
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <p>Personal Expense Tracker &bull; Simple & Minimal Student Project</p>
-    </footer>
-
-    <!-- Logic Script -->
     <script src="script.js"></script>
 </body>
 
