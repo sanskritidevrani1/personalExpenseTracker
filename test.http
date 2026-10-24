@@ -1,0 +1,12 @@
+### 8. Single Import
+POST http://127.0.0.1:5000/transactions
+Content-Type: application/json
+
+{
+  "user_id": 3,
+  "amount": 2000.0,
+  "type": "expense",
+  "description": "Single import test",
+  "txn_date": "2026-10-22",
+  "payment_type": "cash"
+}

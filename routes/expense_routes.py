@@ -3,6 +3,7 @@ from models.db import mysql
 import os
 import tempfile
 from data_processing import auto_categorize_transaction, process_transaction_file
+from algorithms import merge_sort_transactions, binary_search_by_amount
 
 
 
@@ -15,8 +16,11 @@ def add_transaction():
     user_id = data['user_id']
     amount = data['amount']
     txn_type = data['type']
-    category = data.get('category', '')
     description = data.get('description', '')
+    category = data.get('category', '')
+    if not category or category == 'Auto':
+            print("DEBUG:", repr(description), "->", repr(category))
+            category = auto_categorize_transaction(description)
     txn_date = data['txn_date']
     payment_type = data.get('payment_type', 'online')
 
@@ -69,8 +73,8 @@ def add_transaction():
     return jsonify(response), 201
 
 
-@expense_bp.route('/transactions/<int:user_id>', methods=['GET'])
-def get_transactions(user_id):
+
+def fetch_user_transactions(user_id):
     cur = mysql.connection.cursor()
     cur.execute("SELECT * FROM transactions WHERE user_id = %s", (user_id,))
     rows = cur.fetchall()
@@ -88,8 +92,12 @@ def get_transactions(user_id):
             "txn_date": str(row[6]),
             "payment_type": row[8]
         })
+    return transactions
 
-    return jsonify(transactions), 200
+
+@expense_bp.route('/transactions/<int:user_id>', methods=['GET'])
+def get_transactions(user_id):
+    return jsonify(fetch_user_transactions(user_id)), 200
 
 
 @expense_bp.route('/transactions/<int:txn_id>', methods=['PUT'])
@@ -181,3 +189,27 @@ def import_transactions():
     cur.close()
 
     return jsonify({"message": "Transactions imported successfully", "imported": len(transactions)}), 201
+
+@expense_bp.route('/transactions/<int:user_id>/sort', methods=['GET'])
+def sort_transactions(user_id):
+    sort_by = request.args.get('by', 'txn_date')     # txn_date या amount
+    order = request.args.get('order', 'asc')         # asc या desc
+
+    if sort_by not in ('txn_date', 'amount'):
+        return jsonify({"message": "by must be 'txn_date' or 'amount'"}), 400
+
+    txns = fetch_user_transactions(user_id)
+    result = merge_sort_transactions(txns, sort_by, order == 'desc')
+    return jsonify(result), 200
+
+
+@expense_bp.route('/transactions/<int:user_id>/search', methods=['GET'])
+def search_by_amount(user_id):
+    amount = request.args.get('amount', type=float)
+    if amount is None:
+        return jsonify({"message": "amount query parameter is required"}), 400
+
+    txns = fetch_user_transactions(user_id)
+    sorted_txns = merge_sort_transactions(txns, 'amount', False)   # binary search से पहले ascending sort ज़रूरी
+    matches = binary_search_by_amount(sorted_txns, amount)
+    return jsonify(matches), 200
