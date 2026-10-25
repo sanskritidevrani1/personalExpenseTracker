@@ -22,17 +22,15 @@
             </div>
 
             <!-- Login Form (Standard HTML Form, No JS file needed) -->
-            <form action="index.html" method="GET" class="simple-form">
+            <form id="loginForm" action="index.html?access=granted" method="GET" class="simple-form">
                 <div class="input-field">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" placeholder="user@example.com" value="alex@example.com"
-                        required>
+                    <input type="text" id="email" placeholder="user@example.com">
                 </div>
 
                 <div class="input-field">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Enter password"
-                        value="password123" required>
+                    <input type="password" id="password" placeholder="Enter password">
                 </div>
 
                 <div class="extra-row">
@@ -45,7 +43,7 @@
                 <button type="submit" class="login-btn">Login to Dashboard</button>
 
                 <!-- Direct link to dashboard -->
-                <a href="index.html" class="guest-btn">Enter as Guest / Demo</a>
+                <a href="index.html?access=granted" class="guest-btn">Enter as Guest / Demo</a>
             </form>
 
             <!-- Registration Link -->
@@ -55,6 +53,12 @@
         </div>
     </div>
 
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            window.location.href = 'index.html?access=granted';
+        });
+    </script>
 </body>
 
 </html>

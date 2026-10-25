@@ -299,6 +299,11 @@
 
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
+    <script>
+        if (new URLSearchParams(window.location.search).get('access') !== 'granted') {
+            window.location.replace('login.html');
+        }
+    </script>
     <script src="script.js"></script>
 </body>
 
