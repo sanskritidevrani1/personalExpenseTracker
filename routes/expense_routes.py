@@ -4,6 +4,7 @@ import os
 import tempfile
 from data_processing import auto_categorize_transaction, process_transaction_file
 from algorithms import merge_sort_transactions, binary_search_by_amount
+from analytics import get_top_k_expenses
 
 
 
@@ -213,3 +214,12 @@ def search_by_amount(user_id):
     sorted_txns = merge_sort_transactions(txns, 'amount', False)   # binary search से पहले ascending sort ज़रूरी
     matches = binary_search_by_amount(sorted_txns, amount)
     return jsonify(matches), 200
+
+@expense_bp.route('/transactions/<int:user_id>/top', methods=['GET'])
+def top_expenses(user_id):
+    k = request.args.get('k', default=5, type=int)
+    if k <= 0:
+        return jsonify({"message": "k must be a positive number"}), 400
+
+    txns = fetch_user_transactions(user_id)
+    return jsonify(get_top_k_expenses(txns, k)), 200

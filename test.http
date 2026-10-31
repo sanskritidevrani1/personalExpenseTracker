@@ -10,3 +10,18 @@ Content-Type: application/json
   "txn_date": "2026-10-22",
   "payment_type": "cash"
 }
+
+### 10. Sort by amount (highest first)
+GET http://127.0.0.1:5000/transactions/3/sort?by=amount&order=desc
+
+### 11. Sort by date (oldest first)
+GET http://127.0.0.1:5000/transactions/3/sort?by=txn_date&order=asc
+
+### 12. Binary search by amount
+GET http://127.0.0.1:5000/transactions/3/search?amount=25000
+
+### 13. Top 3 expenses
+GET http://127.0.0.1:5000/transactions/3/top?k=3
+
+### 14. Top 5 expenses (default)
+GET http://127.0.0.1:5000/transactions/3/top
