@@ -1,4 +1,5 @@
 const STORAGE_KEY = 'user_expenses_v2';
+const BUDGET_STORAGE_KEY = 'monthly_budgets_v1';
 const DEFAULT_EXPENSE_CATEGORIES = [
   'Food & Dining',
   'Shopping',
@@ -13,6 +14,7 @@ const DEFAULT_INCOME_CATEGORIES = ['Salary', 'Freelance', 'Investment', 'Gift'];
 const DEFAULT_PAYMENT_OPTIONS = ['Credit Card', 'Online / UPI', 'Cash', 'Bank Transfer'];
 
 let transactions = [];
+let monthlyBudgets = {};
 let chartRegistry = {};
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -110,6 +112,394 @@ function addDays(dateString, days) {
   const value = new Date(dateString + 'T00:00:00');
   value.setDate(value.getDate() + days);
   return isoDate(value);
+}
+
+function getCurrentMonthKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function getMonthDisplayName(monthKey) {
+  const [year, month] = monthKey.split('-').map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString('en-IN', {
+    month: 'long',
+    year: 'numeric'
+  });
+}
+
+function loadSavedBudgets() {
+  const stored = localStorage.getItem(BUDGET_STORAGE_KEY);
+  if (!stored) return {};
+
+  try {
+    const parsed = JSON.parse(stored);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new Error('Saved budget data must be an object.');
+    }
+
+    const validMonth = /^\d{4}-(0[1-9]|1[0-2])$/;
+    const loaded = {};
+    Object.entries(parsed).forEach(([month, budget]) => {
+      if (!validMonth.test(month) || !budget || typeof budget !== 'object') return;
+
+      const total = Number(budget.total);
+      const categories = {};
+      if (budget.categories && typeof budget.categories === 'object' && !Array.isArray(budget.categories)) {
+        Object.entries(budget.categories).forEach(([category, amount]) => {
+          const value = Number(amount);
+          if (DEFAULT_EXPENSE_CATEGORIES.includes(category) && Number.isFinite(value) && value > 0) {
+            categories[category] = value;
+          }
+        });
+      }
+
+      if (Number.isFinite(total) && total > 0) {
+        loaded[month] = { total, categories };
+      } else if (Object.keys(categories).length) {
+        loaded[month] = { total: 0, categories };
+      }
+    });
+
+    return loaded;
+  } catch (error) {
+    console.error('Unable to load saved budgets:', error);
+    showToast('Saved budget data could not be read. It has not been overwritten.', 'error');
+    return {};
+  }
+}
+
+function saveBudgets() {
+  localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify(monthlyBudgets));
+}
+
+function getSelectedBudgetMonth() {
+  return document.getElementById('budgetMonthSelect')?.value || getCurrentMonthKey();
+}
+
+function getBudgetMonthKeys() {
+  const months = new Set([getCurrentMonthKey(), ...Object.keys(monthlyBudgets)]);
+  transactions.forEach((item) => {
+    if (item.date && /^\d{4}-\d{2}-\d{2}$/.test(item.date)) {
+      months.add(item.date.slice(0, 7));
+    }
+  });
+  return [...months].sort((a, b) => b.localeCompare(a));
+}
+
+function initializeBudgetControls() {
+  const categorySelect = document.getElementById('budgetCategorySelect');
+  if (categorySelect) {
+    categorySelect.innerHTML = DEFAULT_EXPENSE_CATEGORIES
+      .map((category) => `<option value="${category}">${category}</option>`)
+      .join('');
+  }
+
+  refreshBudgetMonthOptions();
+}
+
+function refreshBudgetMonthOptions() {
+  const monthSelect = document.getElementById('budgetMonthSelect');
+  if (!monthSelect) return;
+
+  const selectedMonth = monthSelect.value || getCurrentMonthKey();
+  const months = getBudgetMonthKeys();
+  monthSelect.innerHTML = months
+    .map((month) => `<option value="${month}">${getMonthDisplayName(month)}</option>`)
+    .join('');
+  monthSelect.value = months.includes(selectedMonth) ? selectedMonth : getCurrentMonthKey();
+}
+
+function getBudgetMonthSummary(monthKey) {
+  const budget = monthlyBudgets[monthKey] || { total: 0, categories: {} };
+  const categorySpent = {};
+  let spent = 0;
+
+  transactions.forEach((item) => {
+    if (item.type !== 'expense' || !item.date || !item.date.startsWith(monthKey)) return;
+    const amount = Number(item.amount) || 0;
+    const category = DEFAULT_EXPENSE_CATEGORIES.includes(item.category) ? item.category : 'Others';
+    spent += amount;
+    categorySpent[category] = (categorySpent[category] || 0) + amount;
+  });
+
+  return {
+    totalBudget: Number(budget.total) || 0,
+    categoryBudgets: budget.categories || {},
+    spent,
+    categorySpent
+  };
+}
+
+function renderBudgetAlert(status, message) {
+  const alert = document.getElementById('budgetAlert');
+  if (!alert) return;
+  alert.className = `budget-alert ${status}`;
+  alert.textContent = message;
+}
+
+function updateCategoryBudgetForm() {
+  const categorySelect = document.getElementById('budgetCategorySelect');
+  const amountInput = document.getElementById('categoryBudgetInput');
+  const saveButton = document.getElementById('categoryBudgetSaveBtn');
+  if (!categorySelect || !amountInput || !saveButton) return;
+
+  const monthBudget = monthlyBudgets[getSelectedBudgetMonth()];
+  const amount = monthBudget?.categories?.[categorySelect.value];
+  amountInput.value = amount || '';
+  saveButton.textContent = amount ? 'Update category budget' : 'Save category budget';
+}
+
+function renderCategoryBudgetRows(summary) {
+  const tableBody = document.getElementById('categoryBudgetTableBody');
+  const emptyState = document.getElementById('categoryBudgetEmptyState');
+  if (!tableBody) return;
+
+  const rows = DEFAULT_EXPENSE_CATEGORIES
+    .filter((category) => Number(summary.categoryBudgets[category]) > 0)
+    .map((category) => {
+      const limit = Number(summary.categoryBudgets[category]);
+      const spent = summary.categorySpent[category] || 0;
+      const percentage = (spent / limit) * 100;
+      const status = percentage >= 100
+        ? { label: 'Exceeded', className: 'danger' }
+        : percentage >= 80
+          ? { label: 'Near limit', className: 'warning' }
+          : { label: 'On track', className: '' };
+
+      return `
+        <tr>
+          <td>${category}</td>
+          <td>${formatINR(limit)}</td>
+          <td>${formatINR(spent)}</td>
+          <td class="budget-row-status ${status.className}">${status.label}</td>
+          <td>
+            <div class="action-group">
+              <button class="action-btn edit" data-action="edit-category-budget" data-category="${category}" type="button">Edit</button>
+              <button class="action-btn delete" data-action="delete-category-budget" data-category="${category}" type="button">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+  tableBody.innerHTML = rows.join('');
+  if (emptyState) emptyState.hidden = rows.length > 0;
+}
+
+function renderBudgetHistory() {
+  const tableBody = document.getElementById('budgetHistoryTableBody');
+  const emptyState = document.getElementById('budgetHistoryEmptyState');
+  if (!tableBody) return;
+
+  const months = getBudgetMonthKeys();
+  tableBody.innerHTML = months.map((month) => {
+    const summary = getBudgetMonthSummary(month);
+    const remaining = summary.totalBudget - summary.spent;
+    const remainingLabel = summary.totalBudget
+      ? remaining >= 0 ? formatINR(remaining) : `${formatINR(Math.abs(remaining))} over`
+      : '—';
+
+    return `
+      <tr>
+        <td>${getMonthDisplayName(month)}</td>
+        <td>${summary.totalBudget ? formatINR(summary.totalBudget) : '—'}</td>
+        <td>${formatINR(summary.spent)}</td>
+        <td>${remainingLabel}</td>
+        <td><button class="action-btn" data-action="view-budget-month" data-month="${month}" type="button">View</button></td>
+      </tr>
+    `;
+  }).join('');
+
+  if (emptyState) emptyState.hidden = months.length > 0;
+}
+
+function drawBudgetComparisonChart(summary) {
+  const canvas = document.getElementById('budgetComparisonChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const categoryNames = DEFAULT_EXPENSE_CATEGORIES.filter((category) =>
+    Number(summary.categoryBudgets[category]) > 0 || Number(summary.categorySpent[category]) > 0
+  );
+  const labels = ['Monthly total', ...categoryNames];
+  const planned = [summary.totalBudget, ...categoryNames.map((category) => Number(summary.categoryBudgets[category]) || 0)];
+  const actual = [summary.spent, ...categoryNames.map((category) => summary.categorySpent[category] || 0)];
+
+  if (chartRegistry.budgetComparison) chartRegistry.budgetComparison.destroy();
+  chartRegistry.budgetComparison = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Planned budget',
+          data: planned,
+          backgroundColor: 'rgba(99, 140, 255, 0.82)',
+          borderRadius: 6
+        },
+        {
+          label: 'Actual expenses',
+          data: actual,
+          backgroundColor: 'rgba(240, 120, 120, 0.82)',
+          borderRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#969EAE', boxWidth: 10 }
+        },
+        tooltip: {
+          callbacks: {
+            label: (context) => `${context.dataset.label}: ${formatINR(context.parsed.y)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: '#969EAE' }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(148, 163, 184, 0.12)' },
+          ticks: {
+            color: '#969EAE',
+            callback: (value) => formatCompactINR(value)
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderBudgetDashboard() {
+  const month = getSelectedBudgetMonth();
+  const summary = getBudgetMonthSummary(month);
+  const percent = summary.totalBudget > 0 ? (summary.spent / summary.totalBudget) * 100 : 0;
+  const usedPercent = Math.round(percent);
+  const remaining = summary.totalBudget - summary.spent;
+  const monthTitle = document.getElementById('budgetOverviewMonth');
+  const monthlyBudgetValue = document.getElementById('monthlyBudgetValue');
+  const monthlySpentValue = document.getElementById('monthlySpentValue');
+  const monthlyRemainingValue = document.getElementById('monthlyRemainingValue');
+  const progress = document.getElementById('monthlyBudgetProgress');
+  const progressFill = document.getElementById('monthlyBudgetProgressFill');
+  const progressLabel = document.getElementById('monthlyBudgetProgressLabel');
+  const progressPercent = document.getElementById('monthlyBudgetProgressPercent');
+  const monthlyInput = document.getElementById('monthlyBudgetInput');
+  const deleteMonthlyButton = document.getElementById('deleteMonthlyBudgetBtn');
+  const saveMonthlyButton = document.getElementById('monthlyBudgetSaveBtn');
+
+  if (monthTitle) monthTitle.textContent = getMonthDisplayName(month);
+  if (monthlyBudgetValue) monthlyBudgetValue.textContent = summary.totalBudget ? formatINR(summary.totalBudget) : 'Not set';
+  if (monthlySpentValue) monthlySpentValue.textContent = formatINR(summary.spent);
+  if (monthlyRemainingValue) {
+    monthlyRemainingValue.textContent = summary.totalBudget
+      ? remaining >= 0 ? formatINR(remaining) : `${formatINR(Math.abs(remaining))} over`
+      : 'Set a budget';
+  }
+  if (monthlyInput) monthlyInput.value = summary.totalBudget || '';
+  if (deleteMonthlyButton) deleteMonthlyButton.hidden = !summary.totalBudget;
+  if (saveMonthlyButton) saveMonthlyButton.textContent = summary.totalBudget ? 'Update budget' : 'Save budget';
+  if (progress) progress.setAttribute('aria-valuenow', String(Math.min(100, Math.max(0, percent))));
+  if (progressFill) {
+    progressFill.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+    progressFill.className = `budget-progress-fill${percent >= 100 ? ' danger' : percent >= 80 ? ' warning' : ''}`;
+  }
+  if (progressLabel) progressLabel.textContent = summary.totalBudget ? `${formatINR(summary.spent)} spent` : 'No monthly budget set';
+  if (progressPercent) progressPercent.textContent = summary.totalBudget ? `${usedPercent}% used` : '0%';
+
+  if (!summary.totalBudget) {
+    renderBudgetAlert('info', 'Set a monthly budget to enable spending alerts.');
+  } else if (percent >= 100) {
+    renderBudgetAlert('danger', `Budget exceeded by ${formatINR(Math.abs(remaining))}.`);
+  } else if (percent >= 80) {
+    renderBudgetAlert('warning', `Warning: ${usedPercent}% of this month's budget has been used.`);
+  } else {
+    renderBudgetAlert('info', 'You are within your monthly spending budget.');
+  }
+
+  updateCategoryBudgetForm();
+  renderCategoryBudgetRows(summary);
+  renderBudgetHistory();
+  drawBudgetComparisonChart(summary);
+}
+
+function saveMonthlyBudget(event) {
+  event.preventDefault();
+  const amount = Number(document.getElementById('monthlyBudgetInput').value);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    showToast('Enter a monthly budget greater than zero.', 'error');
+    return;
+  }
+
+  const month = getSelectedBudgetMonth();
+  const existing = monthlyBudgets[month] || { total: 0, categories: {} };
+  monthlyBudgets[month] = { ...existing, total: amount };
+  saveBudgets();
+  renderBudgetDashboard();
+  showToast('Monthly budget saved.', 'success');
+}
+
+function deleteMonthlyBudget() {
+  const month = getSelectedBudgetMonth();
+  if (!monthlyBudgets[month]?.total) return;
+  if (!window.confirm(`Delete the total budget for ${getMonthDisplayName(month)}?`)) return;
+
+  monthlyBudgets[month].total = 0;
+  if (!Object.keys(monthlyBudgets[month].categories || {}).length) delete monthlyBudgets[month];
+  saveBudgets();
+  renderBudgetDashboard();
+  showToast('Monthly budget deleted.', 'success');
+}
+
+function saveCategoryBudget(event) {
+  event.preventDefault();
+  const category = document.getElementById('budgetCategorySelect').value;
+  const amount = Number(document.getElementById('categoryBudgetInput').value);
+  if (!DEFAULT_EXPENSE_CATEGORIES.includes(category) || !Number.isFinite(amount) || amount <= 0) {
+    showToast('Choose a category and enter a budget greater than zero.', 'error');
+    return;
+  }
+
+  const month = getSelectedBudgetMonth();
+  const existing = monthlyBudgets[month] || { total: 0, categories: {} };
+  monthlyBudgets[month] = {
+    ...existing,
+    categories: { ...existing.categories, [category]: amount }
+  };
+  saveBudgets();
+  renderBudgetDashboard();
+  showToast(`${category} budget saved.`, 'success');
+}
+
+function editCategoryBudget(category) {
+  const monthBudget = monthlyBudgets[getSelectedBudgetMonth()];
+  const amount = monthBudget?.categories?.[category];
+  if (!amount) return;
+
+  document.getElementById('budgetCategorySelect').value = category;
+  document.getElementById('categoryBudgetInput').value = amount;
+  document.getElementById('categoryBudgetSaveBtn').textContent = 'Update category budget';
+  document.getElementById('categoryBudgetInput').focus();
+}
+
+function deleteCategoryBudget(category) {
+  const month = getSelectedBudgetMonth();
+  const monthBudget = monthlyBudgets[month];
+  if (!monthBudget?.categories?.[category]) return;
+  if (!window.confirm(`Delete the ${category} budget for ${getMonthDisplayName(month)}?`)) return;
+
+  delete monthBudget.categories[category];
+  if (!monthBudget.total && !Object.keys(monthBudget.categories).length) delete monthlyBudgets[month];
+  saveBudgets();
+  renderBudgetDashboard();
+  showToast(`${category} budget deleted.`, 'success');
 }
 
 function getSavedTransactions() {
@@ -767,9 +1157,11 @@ function deleteTransaction(id) {
 
 function refreshAll() {
   initializeCategoryOptions();
+  refreshBudgetMonthOptions();
   renderTable();
   updateSummary();
   updateCharts();
+  renderBudgetDashboard();
 }
 
 function resetDemoData() {
@@ -792,6 +1184,11 @@ function bindEvents() {
   document.getElementById('cancelTransactionBtn')?.addEventListener('click', closeModal);
   document.querySelector('.icon-close')?.addEventListener('click', closeModal);
   document.getElementById('transactionForm')?.addEventListener('submit', handleFormSubmit);
+  document.getElementById('monthlyBudgetForm')?.addEventListener('submit', saveMonthlyBudget);
+  document.getElementById('deleteMonthlyBudgetBtn')?.addEventListener('click', deleteMonthlyBudget);
+  document.getElementById('categoryBudgetForm')?.addEventListener('submit', saveCategoryBudget);
+  document.getElementById('budgetCategorySelect')?.addEventListener('change', updateCategoryBudgetForm);
+  document.getElementById('budgetMonthSelect')?.addEventListener('change', renderBudgetDashboard);
   document.getElementById('rangeSelect')?.addEventListener('change', () => {
     updateSummary();
     updateCharts();
@@ -818,6 +1215,20 @@ function bindEvents() {
     if (action === 'delete') {
       deleteTransaction(target.dataset.id);
     }
+    if (action === 'edit-category-budget') {
+      editCategoryBudget(target.dataset.category);
+    }
+    if (action === 'delete-category-budget') {
+      deleteCategoryBudget(target.dataset.category);
+    }
+    if (action === 'view-budget-month') {
+      const monthSelect = document.getElementById('budgetMonthSelect');
+      if (monthSelect) {
+        monthSelect.value = target.dataset.month;
+        renderBudgetDashboard();
+        document.getElementById('budgets').scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   });
 
   document.getElementById('transactionModal')?.addEventListener('click', (event) => {
@@ -827,13 +1238,13 @@ function bindEvents() {
 
 function initializePage() {
   initializeStorageAndData();
+  monthlyBudgets = loadSavedBudgets();
   initializeMonthSelector();
   initializeCategoryOptions();
+  initializeBudgetControls();
   bindEvents();
   updateCategoryFieldBasedOnType();
-  renderTable();
-  updateSummary();
-  updateCharts();
+  refreshAll();
 
   const today = isoDate(new Date());
   const txnDate = document.getElementById('txnDate');
