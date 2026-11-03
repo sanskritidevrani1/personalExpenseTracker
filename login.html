@@ -4,60 +4,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expense Tracker - Login</title>
-    <!-- Simple Google Font -->
+    <title>Sign in - Expense Tracker</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Separate CSS file for Login -->
-    <link rel="stylesheet" href="login.css">
+    <link rel="stylesheet" href="/login.css">
 </head>
 
 <body>
+    <main class="login-wrapper">
+        <section class="login-box">
+            <header class="header">
+                <h1>₹ Expense Tracker</h1>
+                <p>Sign in to manage your personal finances.</p>
+            </header>
 
-    <div class="login-wrapper">
-        <div class="login-box">
-            <!-- Header -->
-            <div class="header">
-                <h2>💰 Expense Tracker</h2>
-                <p>Simple personal expense manager</p>
-            </div>
+            <form id="authForm" class="simple-form">
+                <div class="input-field" id="usernameField" hidden>
+                    <label for="username">Name</label>
+                    <input type="text" id="username" autocomplete="name" maxlength="100">
+                </div>
 
-            <!-- Login Form (Standard HTML Form, No JS file needed) -->
-            <form id="loginForm" action="index.html?access=granted" method="GET" class="simple-form">
                 <div class="input-field">
-                    <label for="email">Email Address</label>
-                    <input type="text" id="email" placeholder="user@example.com">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" autocomplete="email" placeholder="you@example.com" required>
                 </div>
 
                 <div class="input-field">
                     <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="Enter password">
+                    <input type="password" id="password" autocomplete="current-password"
+                        placeholder="At least 8 characters" minlength="8" required>
                 </div>
 
-                <div class="extra-row">
-                    <label class="remember">
-                        <input type="checkbox" checked> Remember me
-                    </label>
-                    <a href="#" class="link">Forgot password?</a>
-                </div>
-
-                <button type="submit" class="login-btn">Login to Dashboard</button>
-
-                <!-- Direct link to dashboard -->
-                <a href="index.html?access=granted" class="guest-btn">Enter as Guest / Demo</a>
+                <p class="auth-message" id="authMessage" role="status" aria-live="polite"></p>
+                <button type="submit" class="login-btn" id="authSubmit">Sign in</button>
             </form>
 
-            <!-- Registration Link -->
-            <div class="footer-note">
-                <p>New user? <a href="#" class="link">Create an account</a></p>
-            </div>
-        </div>
-    </div>
+            <footer class="footer-note">
+                <p><span id="authPrompt">New here?</span>
+                    <button class="link-button" id="authModeToggle" type="button">Create an account</button>
+                </p>
+            </footer>
+        </section>
+    </main>
 
+    <script src="/api.js"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function (event) {
-            event.preventDefault();
-            window.location.href = 'index.html?access=granted';
+        const authForm = document.getElementById('authForm');
+        const usernameField = document.getElementById('usernameField');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const message = document.getElementById('authMessage');
+        const submitButton = document.getElementById('authSubmit');
+        const toggleButton = document.getElementById('authModeToggle');
+        let isSignup = false;
+
+        async function redirectIfSignedIn() {
+            try {
+                await apiRequest('/auth/me', { redirectOnUnauthorized: false });
+                window.location.replace('/');
+            } catch (error) {
+                if (error.status !== 401) message.textContent = error.message;
+            }
+        }
+
+        toggleButton.addEventListener('click', () => {
+            isSignup = !isSignup;
+            usernameField.hidden = !isSignup;
+            usernameInput.required = isSignup;
+            passwordInput.autocomplete = isSignup ? 'new-password' : 'current-password';
+            submitButton.textContent = isSignup ? 'Create account' : 'Sign in';
+            document.getElementById('authPrompt').textContent = isSignup ? 'Already registered?' : 'New here?';
+            toggleButton.textContent = isSignup ? 'Sign in instead' : 'Create an account';
+            message.textContent = '';
         });
+
+        authForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            message.textContent = '';
+            submitButton.disabled = true;
+            const originalLabel = isSignup ? 'Create account' : 'Sign in';
+            submitButton.textContent = isSignup ? 'Creating account...' : 'Signing in...';
+
+            try {
+                await apiRequest(isSignup ? '/signup' : '/login', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        username: usernameInput.value.trim(),
+                        email: document.getElementById('email').value.trim(),
+                        password: passwordInput.value
+                    }),
+                    redirectOnUnauthorized: false
+                });
+                window.location.replace('/');
+            } catch (error) {
+                message.textContent = error.message;
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = originalLabel;
+            }
+        });
+
+        redirectIfSignedIn();
     </script>
 </body>
 

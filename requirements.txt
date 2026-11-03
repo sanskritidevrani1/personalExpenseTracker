@@ -2,3 +2,5 @@ Flask
 Flask-MySQLdb
 Flask-Bcrypt
 Flask-CORS
+pandas
+openpyxl

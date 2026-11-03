@@ -10,18 +10,18 @@ def auto_categorize_transaction(description: str) -> str:
     
     # Hash Map for O(1) keyword lookups
     category_map = {
-        "zomato": "Food", "swiggy": "Food", "mcdonalds": "Food",
+        "zomato": "Food & Dining", "swiggy": "Food & Dining", "mcdonalds": "Food & Dining",
         "uber": "Travel", "ola": "Travel", "irctc": "Travel",
         "amazon": "Shopping", "flipkart": "Shopping", "myntra": "Shopping",
         "netflix": "Entertainment", "spotify": "Entertainment", "movie": "Entertainment",
-        "jio": "Bills", "airtel": "Bills", "electricity": "Bills"
+        "jio": "Bills & Utilities", "airtel": "Bills & Utilities", "electricity": "Bills & Utilities"
     }
     
     for keyword, category in category_map.items():
         if keyword in description:
             return category
             
-    return "Other"
+    return "Others"
 
 def process_transaction_file(file_path: str, user_id: int) -> list:
     """

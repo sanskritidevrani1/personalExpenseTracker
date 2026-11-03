@@ -1,183 +1,194 @@
-from flask import Blueprint, request, jsonify
-from models.db import mysql
+from datetime import date
+import math
 import os
 import tempfile
-from data_processing import auto_categorize_transaction, process_transaction_file
 
+from flask import Blueprint, jsonify, request, session
 
+from models.db import mysql
 
 expense_bp = Blueprint('expense_bp', __name__)
 
 
+def get_transaction_payload(data):
+    amount = data.get('amount')
+    try:
+        amount = float(amount)
+    except (TypeError, ValueError):
+        return None, 'Amount must be a positive number.'
+
+    txn_type = data.get('type')
+    category = str(data.get('category', '')).strip()
+    description = str(data.get('description', '')).strip()
+    txn_date = data.get('txn_date')
+    payment_type = str(data.get('payment_type', 'Online / UPI')).strip()
+
+    if not math.isfinite(amount) or amount <= 0:
+        return None, 'Amount must be greater than zero.'
+    if txn_type not in ('expense', 'income'):
+        return None, 'Type must be expense or income.'
+    if not category or not description or not payment_type:
+        return None, 'Category, title, and payment method are required.'
+    try:
+        parsed_date = date.fromisoformat(txn_date)
+    except (TypeError, ValueError):
+        return None, 'Date must use YYYY-MM-DD format.'
+
+    return (amount, txn_type, category, description, parsed_date, payment_type), None
+
+
 @expense_bp.route('/transactions', methods=['POST'])
 def add_transaction():
-    data = request.get_json()
-    user_id = data['user_id']
-    amount = data['amount']
-    txn_type = data['type']
-    category = data.get('category', '')
-    description = data.get('description', '')
-    txn_date = data['txn_date']
-    payment_type = data.get('payment_type', 'online')
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({'message': 'Please sign in.'}), 401
+
+    data = request.get_json(silent=True) or {}
+    payload, error = get_transaction_payload(data)
+    if error:
+        return jsonify({'message': error}), 400
 
     cur = mysql.connection.cursor()
-    cur.execute(
-        "INSERT INTO transactions (user_id, amount, type, category, description, txn_date, payment_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        (user_id, amount, txn_type, category, description, txn_date, payment_type)
-    )
-    mysql.connection.commit()
-
-    budget_alert = None
-    if txn_type == 'expense':
-        from datetime import datetime
-        month = datetime.strptime(txn_date, '%Y-%m-%d').month
-        year = datetime.strptime(txn_date, '%Y-%m-%d').year
-
+    try:
         cur.execute(
-            "SELECT limit_amount FROM budgets WHERE user_id = %s AND category = %s AND month = %s AND year = %s",
-            (user_id, category, month, year)
+            'INSERT INTO transactions '
+            '(user_id, amount, type, category, description, txn_date, payment_type) '
+            'VALUES (%s, %s, %s, %s, %s, %s, %s)',
+            (user_id, *payload)
         )
-        budget_row = cur.fetchone()
+        mysql.connection.commit()
+        txn_id = cur.lastrowid
+    finally:
+        cur.close()
 
-        if budget_row:
-            cur.execute(
-                "SELECT SUM(amount) FROM transactions WHERE user_id = %s AND category = %s AND type = 'expense' AND MONTH(txn_date) = %s AND YEAR(txn_date) = %s",
-                (user_id, category, month, year)
-            )
-            spent_row = cur.fetchone()
-            limit_amount = float(budget_row[0])
-            total_spent = float(spent_row[0]) if spent_row[0] else 0.0
-
-            status = "within_budget"
-            if total_spent >= limit_amount:
-                status = "exceeded"
-            elif total_spent >= 0.8 * limit_amount:
-                status = "nearing_limit"
-
-            budget_alert = {
-                "limit_amount": limit_amount,
-                "total_spent": total_spent,
-                "status": status
-            }
-
-    cur.close()
-
-    response = {"message": "Transaction added successfully"}
-    if budget_alert:
-        response["budget_alert"] = budget_alert
-
-    return jsonify(response), 201
+    return jsonify({'message': 'Transaction added successfully.', 'txn_id': txn_id}), 201
 
 
 @expense_bp.route('/transactions/<int:user_id>', methods=['GET'])
 def get_transactions(user_id):
+    authenticated_user_id = session.get('user_id')
+    if authenticated_user_id is None:
+        return jsonify({'message': 'Please sign in.'}), 401
+    if authenticated_user_id != user_id:
+        return jsonify({'message': 'You cannot view another user’s transactions.'}), 403
+
     cur = mysql.connection.cursor()
-    cur.execute("SELECT * FROM transactions WHERE user_id = %s", (user_id,))
-    rows = cur.fetchall()
-    cur.close()
+    try:
+        cur.execute(
+            'SELECT txn_id, user_id, amount, type, category, description, txn_date, payment_type '
+            'FROM transactions WHERE user_id = %s ORDER BY txn_date DESC, txn_id DESC',
+            (authenticated_user_id,)
+        )
+        rows = cur.fetchall()
+    finally:
+        cur.close()
 
-    transactions = []
-    for row in rows:
-        transactions.append({
-            "txn_id": row[0],
-            "user_id": row[1],
-            "amount": float(row[2]),
-            "type": row[3],
-            "category": row[4],
-            "description": row[5],
-            "txn_date": str(row[6]),
-            "payment_type": row[8]
-        })
-
-    return jsonify(transactions), 200
+    return jsonify([{
+        'txn_id': row[0],
+        'user_id': row[1],
+        'amount': float(row[2]),
+        'type': row[3],
+        'category': row[4],
+        'description': row[5],
+        'txn_date': row[6].isoformat() if hasattr(row[6], 'isoformat') else str(row[6]),
+        'payment_type': row[7]
+    } for row in rows]), 200
 
 
 @expense_bp.route('/transactions/<int:txn_id>', methods=['PUT'])
 def update_transaction(txn_id):
-    data = request.get_json()
-    user_id = data['user_id']
-    amount = data['amount']
-    category = data.get('category', '')
-    description = data.get('description', '')
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({'message': 'Please sign in.'}), 401
+
+    data = request.get_json(silent=True) or {}
+    payload, error = get_transaction_payload(data)
+    if error:
+        return jsonify({'message': error}), 400
 
     cur = mysql.connection.cursor()
-    cur.execute(
-        "UPDATE transactions SET amount = %s, category = %s, description = %s WHERE txn_id = %s AND user_id = %s",
-        (amount, category, description, txn_id, user_id)
-    )
-    mysql.connection.commit()
-    rows_affected = cur.rowcount
-    cur.close()
+    try:
+        cur.execute(
+            'UPDATE transactions SET amount = %s, type = %s, category = %s, '
+            'description = %s, txn_date = %s, payment_type = %s '
+            'WHERE txn_id = %s AND user_id = %s',
+            (*payload, txn_id, user_id)
+        )
+        mysql.connection.commit()
+        updated = cur.rowcount
+    finally:
+        cur.close()
 
-    if rows_affected == 0:
-        return jsonify({"message": "Transaction not found or does not belong to this user"}), 404
-
-    return jsonify({"message": "Transaction updated successfully"}), 200
+    if not updated:
+        return jsonify({'message': 'Transaction not found.'}), 404
+    return jsonify({'message': 'Transaction updated successfully.'}), 200
 
 
 @expense_bp.route('/transactions/<int:txn_id>', methods=['DELETE'])
 def delete_transaction(txn_id):
-    user_id = request.args.get('user_id')
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({'message': 'Please sign in.'}), 401
 
     cur = mysql.connection.cursor()
-    cur.execute("DELETE FROM transactions WHERE txn_id = %s AND user_id = %s", (txn_id, user_id))
-    mysql.connection.commit()
-    rows_affected = cur.rowcount
-    cur.close()
+    try:
+        cur.execute(
+            'DELETE FROM transactions WHERE txn_id = %s AND user_id = %s',
+            (txn_id, user_id)
+        )
+        mysql.connection.commit()
+        deleted = cur.rowcount
+    finally:
+        cur.close()
 
-    if rows_affected == 0:
-        return jsonify({"message": "Transaction not found or does not belong to this user"}), 404
-
-    return jsonify({"message": "Transaction deleted successfully"}), 200
+    if not deleted:
+        return jsonify({'message': 'Transaction not found.'}), 404
+    return jsonify({'message': 'Transaction deleted successfully.'}), 200
 
 
 @expense_bp.route('/import-transactions', methods=['POST'])
 def import_transactions():
-    # 1. Check if request came via form-data OR json
-    if request.is_json:
-        data = request.get_json()
-        user_id = data.get('user_id')
-        file_path = data.get('file_path')
-        if not user_id or not file_path:
-            return jsonify({"message": "user_id and file_path are required"}), 400
-        
+    user_id = session.get('user_id')
+    if user_id is None:
+        return jsonify({'message': 'Please sign in.'}), 401
+
+    file = request.files.get('file')
+    if not file or not file.filename:
+        return jsonify({'message': 'Choose a CSV or Excel file to import.'}), 400
+
+    suffix = os.path.splitext(file.filename)[1].lower()
+    if suffix not in ('.csv', '.xlsx'):
+        return jsonify({'message': 'Only CSV and XLSX files are supported.'}), 400
+
+    temp_path = None
+    try:
+        from data_processing import process_transaction_file
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            temp_path = temp_file.name
+        file.save(temp_path)
+        transactions = process_transaction_file(temp_path, int(user_id))
+        rows = [
+            (item['user_id'], item['amount'], item['type'], item['category'],
+             item['description'], item['txn_date'], item['payment_type'])
+            for item in transactions
+        ]
+        cur = mysql.connection.cursor()
         try:
-            transactions = process_transaction_file(file_path, int(user_id))
-        except Exception as e:
-            return jsonify({"message": "Could not read file", "error": str(e)}), 400
-
-    else:
-        # Standard File Upload
-        user_id = request.form.get('user_id')
-        file = request.files.get('file')
-        if not user_id or not file:
-            return jsonify({"message": "user_id and file are required"}), 400
-
-        suffix = os.path.splitext(file.filename)[1].lower()
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-        tmp.close()
-        file.save(tmp.name)
-
-        try:
-            transactions = process_transaction_file(tmp.name, int(user_id))
-        except Exception as e:
-            return jsonify({"message": "Could not read file", "error": str(e)}), 400
+            if rows:
+                cur.executemany(
+                    'INSERT INTO transactions '
+                    '(user_id, amount, type, category, description, txn_date, payment_type) '
+                    'VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                    rows
+                )
+                mysql.connection.commit()
         finally:
-            if os.path.exists(tmp.name):
-                os.remove(tmp.name)
+            cur.close()
+    except (ValueError, KeyError) as error:
+        return jsonify({'message': 'Could not read the transaction file.', 'error': str(error)}), 400
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.remove(temp_path)
 
-    rows = [
-        (t['user_id'], t['amount'], t['type'], t['category'],
-         t['description'], t['txn_date'], t['payment_type'])
-        for t in transactions
-    ]
-
-    cur = mysql.connection.cursor()
-    cur.executemany(
-        "INSERT INTO transactions (user_id, amount, type, category, description, txn_date, payment_type) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-        rows
-    )
-    mysql.connection.commit()
-    cur.close()
-
-    return jsonify({"message": "Transactions imported successfully", "imported": len(transactions)}), 201
+    return jsonify({'message': 'Transactions imported successfully.', 'imported': len(rows)}), 201

@@ -40,8 +40,9 @@
 
             <div class="sidebar-status">
                 <span class="status-dot"></span>
-                Demo data active
+                <span id="signedInUser">Signed in</span>
             </div>
+            <button class="secondary-btn" id="logoutBtn" type="button">Sign out</button>
         </aside>
 
         <main class="main-panel">
@@ -66,7 +67,6 @@
                         </select>
                     </div>
                     <button class="primary-btn" id="addTransactionBtn">Add Transaction</button>
-                    <button class="secondary-btn" id="resetDemoBtn" type="button">Reset Demo Data</button>
                 </div>
             </header>
 
@@ -305,13 +305,17 @@
                         <p class="eyebrow">Activity</p>
                         <h2>Recent Transactions</h2>
                     </div>
-                    <a href="#transactions" class="text-link">View All</a>
+                    <div class="header-actions">
+                        <a href="#transactions" class="text-link">View All</a>
+                        <button class="secondary-btn" id="importTransactionsBtn" type="button">Import CSV/Excel</button>
+                        <input id="transactionImportInput" type="file" accept=".csv,.xlsx" hidden>
+                    </div>
                 </div>
 
                 <div class="filters-row">
                     <div class="field search-field">
                         <label class="sr-only" for="searchInput">Search</label>
-                        <input type="text" id="searchInput" placeholder="Search transaction or category">
+                        <input type="text" id="searchInput" placeholder="Search transaction, category or amount">
                     </div>
                     <div class="field">
                         <label class="sr-only" for="typeFilter">Type</label>
@@ -363,7 +367,7 @@
                         <tbody id="transactionTableBody"></tbody>
                     </table>
                     <div class="empty-state" id="emptyState" hidden>
-                        <p>No transactions match the selected period.</p>
+                        <p id="emptyStateMessage">No transactions yet. Add your first expense!</p>
                     </div>
                 </div>
             </section>
@@ -444,11 +448,7 @@
 
     <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
-    <script>
-        if (new URLSearchParams(window.location.search).get('access') !== 'granted') {
-            window.location.replace('login.html');
-        }
-    </script>
+    <script src="/api.js"></script>
     <script src="script.js"></script>
 </body>
 

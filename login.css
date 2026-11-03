@@ -5,6 +5,10 @@
     font-family: 'Poppins', sans-serif;
 }
 
+[hidden] {
+    display: none !important;
+}
+
 body {
     min-height: 100vh;
     display: grid;
@@ -130,8 +134,7 @@ body {
     text-decoration: underline;
 }
 
-.login-btn,
-.guest-btn {
+.login-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -157,15 +160,9 @@ body {
     box-shadow: 0 14px 26px rgba(70, 110, 230, 0.34);
 }
 
-.guest-btn:hover {
-    transform: translateY(-1px);
-    border-color: rgba(99, 140, 255, 0.45);
-}
-
-.guest-btn {
-    background: rgba(32, 37, 48, 0.72);
-    color: #f1f3f8;
-    border-color: #303746;
+.login-btn:disabled {
+    cursor: wait;
+    opacity: 0.7;
 }
 
 .footer-note {
@@ -174,6 +171,32 @@ body {
     border-top: 1px solid #303746;
     text-align: center;
     color: #969eae;
+    font-size: 0.82rem;
+}
+
+.footer-note p {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.link-button {
+    border: 0;
+    background: none;
+    color: #638cff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.link-button:hover {
+    color: #91adff;
+    text-decoration: underline;
+}
+
+.auth-message {
+    min-height: 1.25em;
+    color: #f07878;
     font-size: 0.82rem;
 }
 
