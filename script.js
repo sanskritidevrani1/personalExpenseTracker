@@ -15,8 +15,8 @@ const DEFAULT_EXPENSE_CATEGORIES = [
 ];
 const DEFAULT_INCOME_CATEGORIES = ['Salary', 'Freelance', 'Investment', 'Gift'];
 const PAYMENT_OPTIONS = [
-  { value: 'upi', label: 'UPI' },
-  { value: 'online', label: 'Online / Card' },
+  { value: 'online', label: 'Online / UPI' },
+  { value: 'card', label: 'Card' },
   { value: 'cash', label: 'Cash' }
 ];
 const SORT_MAP = {
@@ -87,6 +87,7 @@ async function refreshData() {
   await loadSorted();
   refreshAll();
   await refreshBudgets();
+  await renderSpendingSummary();
 }
 
 /* ---------------- formatting ---------------- */
@@ -918,6 +919,7 @@ async function initializePage() {
   initializeCategoryOptions();
   addTopButton();
   setupViews();
+  setupReceiptView();
   bindEvents();
   updateCategoryFieldBasedOnType();
   updateSummary();
@@ -1137,6 +1139,8 @@ function showView(view) {
   show(txnPanel, view === 'transactions');
   show(document.getElementById('budgetsView'), view === 'budgets');
   show(document.getElementById('importView'), view === 'import');
+  show(document.getElementById('receiptView'), view === 'receipt');
+  show(document.getElementById('summaryPanel'), view === 'dashboard');
 
   document.querySelectorAll('.sidebar-nav [data-view]').forEach((a) => {
     a.classList.toggle('active', a.dataset.view === view);
@@ -1400,6 +1404,181 @@ function downloadSample() {
   link.download = 'sample_transactions.csv';
   link.click();
   URL.revokeObjectURL(url);
+}
+/* ================= Spending summary + Receipt scan ================= */
+
+async function renderSpendingSummary() {
+  try {
+    const s = await api(`/transactions/${USER_ID}/summary`);
+    let panel = document.getElementById('summaryPanel');
+    if (!panel) {
+      panel = document.createElement('section');
+      panel.id = 'summaryPanel';
+      panel.className = 'card';
+      panel.style.padding = '20px';
+      const grid = document.querySelector('.analytics-grid');
+      if (!grid) return;
+      grid.parentNode.insertBefore(panel, grid);
+    }
+    const active = document.querySelector('.sidebar-nav .active')?.dataset.view;
+    panel.style.display = active === 'dashboard' ? '' : 'none';
+
+    const cats = Object.entries(s.category_breakdown)
+      .sort((a, b) => b[1] - a[1])
+      .map(([c, v]) => `<li>${escapeHtml(c)}: <strong>${formatINR(v)}</strong></li>`).join('') || '<li>No expenses yet</li>';
+    const tops = s.top_expenses
+      .map((t) => `<li>${escapeHtml(t.description)}: <strong>${formatINR(t.amount)}</strong></li>`).join('') || '<li>No expenses yet</li>';
+
+    panel.innerHTML = `
+      <p class="eyebrow">Insights</p>
+      <h2 style="margin:4px 0 16px">Spending Summary</h2>
+      <div class="bx-stats">
+        <div class="bx-stat a"><small>Total spent</small><strong>${formatINR(s.total_spent)}</strong></div>
+        <div class="bx-stat b"><small>Expenses</small><strong>${s.expense_count}</strong></div>
+        <div class="bx-stat c"><small>Average expense</small><strong>${formatINR(s.average_expense)}</strong></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;margin-top:20px">
+        <div><h3>By category</h3><ul style="list-style:none;padding:0;line-height:2">${cats}</ul></div>
+        <div><h3>Top 3 expenses</h3><ul style="list-style:none;padding:0;line-height:2">${tops}</ul></div>
+      </div>`;
+  } catch (e) { /* summary is optional, ignore errors */ }
+}
+
+function setupReceiptView() {
+  const nav = document.querySelector('.sidebar-nav');
+  const main = document.querySelector('.main-panel');
+  if (!nav || !main) return;
+
+  nav.insertAdjacentHTML('beforeend',
+    '<a href="#" class="nav-item" data-view="receipt"><span class="nav-icon">▣</span>Scan Receipt</a>');
+
+  const expenseCats = DEFAULT_EXPENSE_CATEGORIES.map((c) => `<option value="${c}">${c}</option>`).join('');
+  const payOpts = PAYMENT_OPTIONS.map((p) => `<option value="${p.value}">${p.label}</option>`).join('');
+
+  const view = document.createElement('section');
+  view.id = 'receiptView';
+  view.className = 'bx-page';
+  view.style.display = 'none';
+  view.innerHTML = `
+    <div class="bx-head">
+      <p class="eyebrow">Smart entry</p>
+      <h1>Scan Receipt</h1>
+      <p class="sub">Upload a photo of a bill. We read it, you check the details, then save.</p>
+    </div>
+    <div class="bx-drop">
+      <h3>Choose a receipt photo</h3>
+      <p class="bx-note">JPG or PNG, clear and well lit</p>
+      <input type="file" id="rcFile" accept="image/png,image/jpeg" hidden>
+      <button type="button" class="bx-btn alt" id="rcPick">Browse photo</button>
+      <div class="bx-file" id="rcFileName">No file selected</div>
+      <img id="rcPreview" alt="" style="display:none;max-width:240px;border-radius:14px;margin:14px auto 0">
+      <div style="margin-top:18px">
+        <button class="bx-btn" id="rcScan" type="button">Scan Receipt</button>
+      </div>
+    </div>
+    <div id="rcResultBox" class="bx-card" style="display:none">
+      <h3 style="margin:0 0 14px">Check and save</h3>
+      <div class="bx-form">
+        <label class="bx-field">Description<input id="rcDesc" class="bx-input"></label>
+        <label class="bx-field">Amount (₹)<input id="rcAmount" type="number" step="0.01" class="bx-input"></label>
+        <label class="bx-field">Date<input id="rcDate" type="date" class="bx-input"></label>
+        <label class="bx-field">Category<select id="rcCategory" class="bx-input">${expenseCats}</select></label>
+        <label class="bx-field">Payment<select id="rcPayment" class="bx-input">${payOpts}</select></label>
+        <button id="rcSave" type="button" class="bx-btn">Save Transaction</button>
+      </div>
+    </div>
+    <div id="rcMsg"></div>`;
+  main.appendChild(view);
+
+  let receiptFile = null;
+
+  document.getElementById('rcPick').addEventListener('click', () => document.getElementById('rcFile').click());
+  document.getElementById('rcFile').addEventListener('change', (e) => {
+    receiptFile = e.target.files[0] || null;
+    document.getElementById('rcFileName').textContent = receiptFile ? receiptFile.name : 'No file selected';
+    const img = document.getElementById('rcPreview');
+    if (receiptFile) {
+      img.src = URL.createObjectURL(receiptFile);
+      img.style.display = 'block';
+    } else {
+      img.style.display = 'none';
+    }
+  });
+
+  document.getElementById('rcScan').addEventListener('click', async () => {
+    const msg = document.getElementById('rcMsg');
+    const btn = document.getElementById('rcScan');
+    if (!receiptFile) {
+      showToast('Please choose a receipt photo first.', 'error');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('user_id', USER_ID);
+    formData.append('file', receiptFile);
+
+    btn.disabled = true;
+    btn.textContent = 'Scanning... (first scan can take a minute)';
+    msg.innerHTML = '';
+
+    try {
+      const res = await fetch(API + '/scan-receipt', { method: 'POST', body: formData });
+      let data = {};
+      try { data = await res.json(); } catch (e) { /* no body */ }
+      if (!res.ok) throw new Error(data.message || 'Scan failed');
+
+      document.getElementById('rcDesc').value = data.description || '';
+      document.getElementById('rcAmount').value = data.amount || '';
+      document.getElementById('rcDate').value = data.txn_date || isoDate(new Date());
+      const catSelect = document.getElementById('rcCategory');
+      ensureOption(catSelect, data.category);
+      catSelect.value = data.category;
+      document.getElementById('rcResultBox').style.display = 'block';
+      msg.innerHTML = '<div class="bx-alert ok">✓ Receipt scanned. Please check the details below before saving.</div>';
+    } catch (error) {
+      msg.innerHTML = `<div class="bx-alert danger">✖ ${escapeHtml(error.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Scan Receipt';
+    }
+  });
+
+  document.getElementById('rcSave').addEventListener('click', async () => {
+    const amount = Number(document.getElementById('rcAmount').value);
+    const description = document.getElementById('rcDesc').value.trim();
+    const date = document.getElementById('rcDate').value;
+
+    if (!description || !amount || amount <= 0 || !date) {
+      showToast('Enter a description, amount and date.', 'error');
+      return;
+    }
+
+    try {
+      await api('/transactions', {
+        method: 'POST',
+        body: JSON.stringify({
+          user_id: Number(USER_ID),
+          amount,
+          type: 'expense',
+          category: document.getElementById('rcCategory').value,
+          description,
+          txn_date: date,
+          payment_type: document.getElementById('rcPayment').value
+        })
+      });
+      showToast('Receipt saved as a transaction.', 'success');
+      document.getElementById('rcResultBox').style.display = 'none';
+      document.getElementById('rcMsg').innerHTML = '';
+      document.getElementById('rcPreview').style.display = 'none';
+      document.getElementById('rcFile').value = '';
+      document.getElementById('rcFileName').textContent = 'No file selected';
+      receiptFile = null;
+      await refreshData();
+      showView('transactions');
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  });
 }
 
 window.addEventListener('DOMContentLoaded', initializePage);
