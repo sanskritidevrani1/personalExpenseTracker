@@ -1,8 +1,3 @@
-/* ========================================================
-   Personal Expense Tracker - Login Stylesheet (login.css)
-   Clean, Minimal, Subtle and User-Friendly
-   ======================================================== */
-
 * {
     margin: 0;
     padding: 0;
@@ -11,158 +6,203 @@
 }
 
 body {
-    background-color: #f1f5f9;
-    color: #334155;
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+    display: grid;
+    place-items: center;
+    padding: 28px 20px;
+    background:
+        radial-gradient(ellipse at 50% 0, rgba(99, 140, 255, 0.2), transparent 42%),
+        radial-gradient(circle at 100% 100%, rgba(66, 201, 154, 0.07), transparent 32%),
+        #151821;
+    color: #f1f3f8;
 }
 
-/* Card Container */
 .login-wrapper {
-    width: 100%;
-    max-width: 400px;
+    width: min(100%, 420px);
+    animation: login-enter 0.55s ease both;
 }
 
 .login-box {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 32px 28px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, rgba(31, 37, 49, 0.98), rgba(25, 29, 38, 0.98));
+    border: 1px solid rgba(150, 158, 174, 0.18);
+    border-radius: 22px;
+    padding: 38px 32px 28px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(99, 140, 255, 0.04);
 }
 
-/* Header */
+.login-box::before {
+    position: absolute;
+    top: 0;
+    left: 12%;
+    width: 76%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(99, 140, 255, 0.8), transparent);
+    content: "";
+}
+
 .header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 30px;
 }
 
 .header h2 {
-    font-size: 22px;
-    color: #1e293b;
-    margin-bottom: 4px;
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.045em;
+    margin-bottom: 8px;
 }
 
 .header p {
-    font-size: 13px;
-    color: #64748b;
+    color: #969eae;
+    font-size: 0.88rem;
 }
 
-/* Form Fields */
 .simple-form {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
 }
 
 .input-field {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
 }
 
 .input-field label {
-    font-size: 13px;
+    color: #dce1eb;
+    font-size: 0.82rem;
     font-weight: 500;
-    color: #475569;
 }
 
 .input-field input {
-    padding: 10px 12px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 14px;
+    background: rgba(21, 24, 33, 0.64);
+    border: 1px solid #353d4d;
+    border-radius: 11px;
+    color: #f1f3f8;
+    font-size: 0.88rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .input-field input:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    outline: none;
+    border-color: #638cff;
+    background: #1d2330;
+    box-shadow: 0 0 0 4px rgba(99, 140, 255, 0.14);
 }
 
-.input-field input:hover {
-    border-color: #94a3b8;
+.input-field input::placeholder {
+    color: #70798a;
 }
 
-/* Extra Options */
 .extra-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    font-size: 12.5px;
-    color: #64748b;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.76rem;
+    color: #969eae;
 }
 
 .remember {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    cursor: pointer;
+    gap: 8px;
 }
 
 .remember input {
-    accent-color: #2563eb;
-    cursor: pointer;
+    accent-color: #638cff;
 }
 
 .link {
-    color: #2563eb;
+    color: #638cff;
     text-decoration: none;
     transition: color 0.2s ease;
 }
 
 .link:hover {
-    color: #1d4ed8;
+    color: #91adff;
     text-decoration: underline;
 }
 
-/* Buttons with Hover Effects */
+.login-btn,
+.guest-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.88rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
 .login-btn {
-    background-color: #2563eb;
-    color: #ffffff;
-    border: none;
-    padding: 11px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
+    background: linear-gradient(135deg, #7196ff, #557df0);
+    color: white;
+    box-shadow: 0 10px 22px rgba(70, 110, 230, 0.25);
     cursor: pointer;
-    transition: background-color 0.2s ease;
 }
 
 .login-btn:hover {
-    background-color: #1d4ed8;
-}
-
-.guest-btn {
-    display: block;
-    text-align: center;
-    background-color: #f8fafc;
-    color: #475569;
-    border: 1px solid #cbd5e1;
-    padding: 9px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 26px rgba(70, 110, 230, 0.34);
 }
 
 .guest-btn:hover {
-    background-color: #eff6ff;
-    color: #2563eb;
-    border-color: #93c5fd;
+    transform: translateY(-1px);
+    border-color: rgba(99, 140, 255, 0.45);
 }
 
-/* Footer Note */
+.guest-btn {
+    background: rgba(32, 37, 48, 0.72);
+    color: #f1f3f8;
+    border-color: #303746;
+}
+
 .footer-note {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #303746;
     text-align: center;
-    margin-top: 20px;
-    font-size: 13px;
-    color: #64748b;
-    border-top: 1px solid #f1f5f9;
-    padding-top: 14px;
+    color: #969eae;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 480px) {
+    .login-box {
+        padding: 30px 22px 24px;
+    }
+
+    .header h2 {
+        font-size: 1.55rem;
+    }
+}
+
+@keyframes login-enter {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
 }

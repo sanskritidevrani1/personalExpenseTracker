@@ -5,34 +5,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Tracker - Login</title>
-    <!-- Simple Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <!-- Separate CSS file for Login -->
     <link rel="stylesheet" href="login.css">
+    <style>
+        #msg { text-align: center; font-size: 0.85rem; min-height: 20px; }
+        #msg.ok { color: #42c99a; }
+        #msg.err { color: #ff6b6b; }
+        #usernameField { display: none; }
+    </style>
 </head>
 
 <body>
 
     <div class="login-wrapper">
         <div class="login-box">
-            <!-- Header -->
             <div class="header">
                 <h2>💰 Expense Tracker</h2>
-                <p>Simple personal expense manager</p>
+                <p id="subtitle">Simple personal expense manager</p>
             </div>
 
-            <!-- Login Form (Standard HTML Form, No JS file needed) -->
-            <form action="index.html" method="GET" class="simple-form">
+            <form id="loginForm" class="simple-form">
+                <div class="input-field" id="usernameField">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="Your name">
+                </div>
+
                 <div class="input-field">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" placeholder="user@example.com" value="alex@example.com"
-                        required>
+                    <input type="text" id="email" placeholder="user@example.com">
                 </div>
 
                 <div class="input-field">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="Enter password"
-                        value="password123" required>
+                    <input type="password" id="password" placeholder="Enter password">
                 </div>
 
                 <div class="extra-row">
@@ -42,19 +47,83 @@
                     <a href="#" class="link">Forgot password?</a>
                 </div>
 
-                <button type="submit" class="login-btn">Login to Dashboard</button>
+                <div id="msg"></div>
 
-                <!-- Direct link to dashboard -->
-                <a href="index.html" class="guest-btn">Enter as Guest / Demo</a>
+                <button type="submit" class="login-btn" id="submitBtn">Login to Dashboard</button>
             </form>
 
-            <!-- Registration Link -->
             <div class="footer-note">
-                <p>New user? <a href="#" class="link">Create an account</a></p>
+                <p><span id="toggleText">New user?</span> <a href="#" class="link" id="toggleLink">Create an account</a></p>
             </div>
         </div>
     </div>
 
+    <script>
+        const API = "http://127.0.0.1:5000";
+        let mode = "login";
+
+        const msg = document.getElementById("msg");
+
+        function showMsg(text, ok) {
+            msg.textContent = text;
+            msg.className = ok ? "ok" : "err";
+        }
+
+        document.getElementById("toggleLink").addEventListener("click", function (e) {
+            e.preventDefault();
+            mode = mode === "login" ? "signup" : "login";
+            const signup = mode === "signup";
+            document.getElementById("usernameField").style.display = signup ? "flex" : "none";
+            document.getElementById("submitBtn").textContent = signup ? "Create Account" : "Login to Dashboard";
+            document.getElementById("toggleText").textContent = signup ? "Already registered?" : "New user?";
+            document.getElementById("toggleLink").textContent = signup ? "Login" : "Create an account";
+            document.getElementById("subtitle").textContent = signup ? "Create your account" : "Simple personal expense manager";
+            msg.textContent = "";
+        });
+
+        document.getElementById("loginForm").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+            const username = document.getElementById("username").value.trim();
+
+            if (!email || !password || (mode === "signup" && !username)) {
+                showMsg("Please fill all fields", false);
+                return;
+            }
+
+            const body = { email, password };
+            if (mode === "signup") body.username = username;
+
+            try {
+                const res = await fetch(API + "/" + mode, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+
+                let data = {};
+                try { data = await res.json(); } catch (e) {}
+
+                if (!res.ok) {
+                    showMsg(data.message || "Something went wrong (maybe email already exists)", false);
+                    return;
+                }
+
+                if (mode === "signup") {
+                    document.getElementById("toggleLink").click();
+                    showMsg("Registered successfully. Please login.", true);
+                } else {
+                    localStorage.setItem("user_id", data.user_id);
+                    localStorage.setItem("user_email", email);
+                    window.location.href = "index.html?access=granted";
+                }
+            } catch (e) {
+                showMsg("Cannot reach server. Is python app.py running?", false);
+            }
+        });
+    </script>
 </body>
 
 </html>

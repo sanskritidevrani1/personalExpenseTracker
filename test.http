@@ -25,3 +25,22 @@ GET http://127.0.0.1:5000/transactions/3/top?k=3
 
 ### 14. Top 5 expenses (default)
 GET http://127.0.0.1:5000/transactions/3/top
+
+
+### Scan receipt
+POST http://127.0.0.1:5000/scan-receipt
+Content-Type: multipart/form-data; boundary=----MyBoundary
+
+------MyBoundary
+Content-Disposition: form-data; name="user_id"
+
+3
+------MyBoundary
+Content-Disposition: form-data; name="file"; filename="receipt.png"
+Content-Type: image/png
+
+< ./receipt.png
+------MyBoundary--
+
+### Spending summary
+GET http://127.0.0.1:5000/transactions/3/summary

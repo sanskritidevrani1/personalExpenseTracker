@@ -5,7 +5,7 @@ import tempfile
 from data_processing import auto_categorize_transaction, process_transaction_file
 from algorithms import merge_sort_transactions, binary_search_by_amount
 from analytics import get_top_k_expenses
-
+from analytics import get_top_k_expenses, generate_spending_summary
 
 
 expense_bp = Blueprint('expense_bp', __name__)
@@ -223,3 +223,37 @@ def top_expenses(user_id):
 
     txns = fetch_user_transactions(user_id)
     return jsonify(get_top_k_expenses(txns, k)), 200
+
+@expense_bp.route('/transactions/<int:user_id>/summary', methods=['GET'])
+def spending_summary(user_id):
+    txns = fetch_user_transactions(user_id)
+    return jsonify(generate_spending_summary(txns)), 200
+
+
+@expense_bp.route('/scan-receipt', methods=['POST'])
+def scan_receipt():
+    user_id = request.form.get('user_id')
+    file = request.files.get('file')
+    if not user_id or not file:
+        return jsonify({"message": "user_id and image file are required"}), 400
+
+    suffix = os.path.splitext(file.filename)[1].lower()
+    if suffix not in ('.jpg', '.jpeg', '.png'):
+        return jsonify({"message": "Upload a JPG or PNG image"}), 400
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    tmp.close()
+    file.save(tmp.name)
+
+    try:
+        from receipt_scanner import scan_receipt_image
+        result = scan_receipt_image(tmp.name, int(user_id))
+    except ValueError as e:
+        return jsonify({"message": str(e)}), 400
+    except Exception as e:
+        return jsonify({"message": "Could not scan receipt", "error": str(e)}), 500
+    finally:
+        if os.path.exists(tmp.name):
+            os.remove(tmp.name)
+
+    return jsonify(result), 200
